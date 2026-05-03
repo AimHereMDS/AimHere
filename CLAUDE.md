@@ -3,7 +3,7 @@
 ## Project Structure
 
 - `frontend/`: React + Vite + TypeScript + Tailwind CSS.
-- `backend/`: FastAPI, SQLAlchemy, Supabase PostgreSQL, AI agents.
+- `backend/`: FastAPI, SQLAlchemy, Supabase PostgreSQL, local auth, AI agents.
 - `.github/workflows/ci.yml`: backend tests and frontend build.
 - `docker-compose.yml`: frontend and backend only. Supabase hosts Postgres.
 
@@ -32,18 +32,14 @@ The app runs at `http://localhost:5173`; the API runs at `http://localhost:8000`
 Copy `.env.example` to `.env` at the repo root for Docker, and expose the same values to backend/frontend local shells as needed.
 
 Required backend keys:
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_DB_URL`
+- `AUTH_SECRET_KEY`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_MAPS_API_KEY`
 - `CORS_ORIGINS`
 
 Required frontend keys:
 - `VITE_API_URL`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
 - `VITE_GOOGLE_MAPS_API_KEY`
 
 ## Adding New Agents
@@ -58,6 +54,7 @@ Required frontend keys:
 ## Code Style
 
 - Use typed Pydantic schemas for API boundaries.
+- Use local JWT auth; do not use Supabase Auth.
 - Keep database writes in routers or service functions, not frontend code.
 - Never hardcode API keys.
 - Do not add a locations table; generate or curate locations at runtime.
@@ -74,4 +71,3 @@ pytest
 cd frontend
 npm run build
 ```
-

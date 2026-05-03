@@ -1,34 +1,65 @@
 import type React from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { supabase } from "../utils/supabase";
+import type { Profile } from "../types/game";
+import {
+  clearAuthToken,
+  fetchCurrentUser,
+  getAuthToken,
+  loginWithPassword,
+  registerWithPassword,
+} from "../utils/auth";
 
 type AuthContextValue = {
-  user: User | null;
-  session: Session | null;
+  user: Profile | null;
   loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
+  logout: () => void;
 };
 
-const AuthContext = createContext<AuthContextValue>({ user: null, session: null, loading: true });
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  loading: true,
+  login: async () => undefined,
+  register: async () => undefined,
+  logout: () => undefined,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    if (!getAuthToken()) {
       setLoading(false);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setLoading(false);
-    });
-    return () => data.subscription.unsubscribe();
+      return;
+    }
+    fetchCurrentUser()
+      .then(setUser)
+      .catch(() => {
+        clearAuthToken();
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const value = useMemo(() => ({ user: session?.user ?? null, session, loading }), [session, loading]);
+  const login = useCallback(async (email: string, password: string) => {
+    const profile = await loginWithPassword(email, password);
+    setUser(profile);
+  }, []);
+
+  const register = useCallback(async (email: string, password: string) => {
+    const profile = await registerWithPassword(email, password);
+    setUser(profile);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearAuthToken();
+    setUser(null);
+  }, []);
+
+  const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading, login, register, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

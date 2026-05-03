@@ -1,48 +1,40 @@
 from __future__ import annotations
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session
 
-from app.database import get_settings
+from app.database import get_db
 from app.models.user import UserProfile
 from app.schemas import UserProfileOut
-from app.security import get_current_user
+from app.security import authenticate_user, create_access_token, create_user_profile, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class AuthCredentials(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=6, max_length=128)
 
 
-async def _supabase_auth(path: str, body: dict[str, str]) -> dict:
-    settings = get_settings()
-    if not settings.supabase_url or not settings.supabase_anon_key:
-        raise HTTPException(status_code=500, detail="Supabase auth environment is not configured")
-    async with httpx.AsyncClient(timeout=12) as client:
-        response = await client.post(
-            f"{settings.supabase_url.rstrip('/')}/auth/v1/{path}",
-            headers={"apikey": settings.supabase_anon_key, "Content-Type": "application/json"},
-            json=body,
-        )
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=response.json())
-    return response.json()
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserProfileOut
 
 
-@router.post("/register")
-async def register(credentials: AuthCredentials) -> dict:
-    return await _supabase_auth("signup", credentials.model_dump())
+@router.post("/register", response_model=AuthResponse)
+async def register(credentials: AuthCredentials, db: Session = Depends(get_db)) -> AuthResponse:
+    user = create_user_profile(db, credentials.email, credentials.password)
+    return AuthResponse(access_token=create_access_token(user), user=UserProfileOut.model_validate(user))
 
 
-@router.post("/login")
-async def login(credentials: AuthCredentials) -> dict:
-    return await _supabase_auth("token?grant_type=password", credentials.model_dump())
+@router.post("/login", response_model=AuthResponse)
+async def login(credentials: AuthCredentials, db: Session = Depends(get_db)) -> AuthResponse:
+    user = authenticate_user(db, credentials.email, credentials.password)
+    return AuthResponse(access_token=create_access_token(user), user=UserProfileOut.model_validate(user))
 
 
 @router.get("/me", response_model=UserProfileOut)
 async def me(user: UserProfile = Depends(get_current_user)) -> UserProfile:
     return user
-

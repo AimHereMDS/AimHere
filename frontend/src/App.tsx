@@ -9,10 +9,9 @@ import { Home } from "./pages/Home";
 import { Leaderboard } from "./pages/Leaderboard";
 import { Profile } from "./pages/Profile";
 import { Results } from "./pages/Results";
-import { supabase } from "./utils/supabase";
 
 function Nav() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `rounded-md px-3 py-2 text-sm font-semibold ${isActive ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`;
 
@@ -34,7 +33,7 @@ function Nav() {
           {user && (
             <button
               className="ml-2 rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
-              onClick={() => supabase.auth.signOut()}
+              onClick={logout}
               title="Sign out"
               type="button"
             >
@@ -90,4 +89,3 @@ export default function App() {
     </>
   );
 }
-

@@ -11,6 +11,7 @@ class UserProfile(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     games_played: Mapped[int] = mapped_column(Integer, default=0)
@@ -23,4 +24,3 @@ class UserProfile(Base):
 
     games = relationship("Game", back_populates="user")
     scores = relationship("Score", back_populates="user")
-
