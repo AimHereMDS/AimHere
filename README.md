@@ -4,7 +4,7 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 
 ## Features
 
-- Supabase email/password auth and Google OAuth.
+- Local email/password auth backed by the application database.
 - Protected game, results, and profile routes.
 - User profile stats: games played, total score, average score, best score, and streaks.
 - Global leaderboard from Supabase PostgreSQL.
@@ -19,14 +19,14 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 
 ## Tech Stack
 
-- Frontend: React, Vite, TypeScript, Tailwind CSS, Supabase JS, Google Maps JavaScript API.
+- Frontend: React, Vite, TypeScript, Tailwind CSS, Google Maps JavaScript API.
 - Backend: FastAPI, SQLAlchemy, PostgreSQL on Supabase, Anthropic API, Google Street View metadata API.
 - CI: GitHub Actions.
 - Containers: Docker Compose with frontend and backend services only.
 
 ## Setup
 
-1. Create a Supabase project and configure email/password plus Google OAuth.
+1. Create a Supabase project for PostgreSQL hosting.
 2. Enable a Google Maps JavaScript API key with Maps JavaScript API and Street View metadata access.
 3. Create an Anthropic API key.
 4. Copy `.env.example` to `.env` and fill in values.
@@ -54,7 +54,7 @@ docker compose up --build
 
 ## Supabase Database
 
-Set `SUPABASE_DB_URL` to your Supabase PostgreSQL connection string. The backend creates the minimal tables on startup:
+Set `SUPABASE_DB_URL` to your Supabase PostgreSQL connection string. Authentication is handled by this FastAPI app with hashed passwords stored in the `users` table. The backend creates the minimal tables on startup:
 
 - `users`
 - `games`

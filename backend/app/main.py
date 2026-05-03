@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.database import Base, engine, get_settings
 from app.models import game, round, score, user  # noqa: F401
@@ -20,7 +21,14 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
+    if settings.auth_secret_key == "change-me-local-dev-secret" and not settings.supabase_db_url.startswith("sqlite"):
+        raise RuntimeError("AUTH_SECRET_KEY must be set to a strong random value in non-SQLite environments")
     Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    if "password_hash" not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
 
 
 @app.get("/health")
@@ -32,4 +40,3 @@ app.include_router(auth.router)
 app.include_router(game_router.router)
 app.include_router(locations.router)
 app.include_router(leaderboard.router)
-

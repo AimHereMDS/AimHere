@@ -11,10 +11,8 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_service_role_key: str = ""
     supabase_db_url: str = "sqlite:///./aimhere.db"
+    auth_secret_key: str = "change-me-local-dev-secret"
     anthropic_api_key: str = ""
     google_maps_api_key: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
@@ -53,4 +51,3 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-

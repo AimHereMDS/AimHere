@@ -46,28 +46,30 @@ async def opponent_guess(lat: float, lng: float, difficulty: str = "medium") -> 
     )
     settings = get_settings()
     if settings.anthropic_api_key:
-        client = Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=350,
-            temperature=0.2,
-            system=(
-                "You are the Opponent Agent in a GeoGuessr-like PvE match. Explain the visual "
-                "reasoning an AI player would use from a panorama. Return only JSON with an "
-                "explanation field. Do not reveal the exact real coordinates."
-            ),
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Panorama coordinates: {lat}, {lng}. Difficulty: {difficulty}.",
-                }
-            ],
-        )
-        explanation = _parse_explanation(message.content[0].text if message.content else "") or explanation
+        try:
+            client = Anthropic(api_key=settings.anthropic_api_key)
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=350,
+                temperature=0.2,
+                system=(
+                    "You are the Opponent Agent in a GeoGuessr-like PvE match. Explain the visual "
+                    "reasoning an AI player would use from a panorama. Return only JSON with an "
+                    "explanation field. Do not reveal the exact real coordinates."
+                ),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Panorama coordinates: {lat}, {lng}. Difficulty: {difficulty}.",
+                    }
+                ],
+            )
+            explanation = _parse_explanation(message.content[0].text if message.content else "") or explanation
+        except Exception:
+            pass
     return {
         "lat": guess_lat,
         "lng": guess_lng,
         "difficulty": difficulty,
         "explanation": explanation,
     }
-

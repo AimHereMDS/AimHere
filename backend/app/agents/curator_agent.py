@@ -87,25 +87,28 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
     if not settings.anthropic_api_key:
         return _fallback_for_query(description, count)
 
-    client = Anthropic(api_key=settings.anthropic_api_key)
-    message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=900,
-        temperature=0.2,
-        system=(
-            "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
-            "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
-            "locations likely to have Google Street View coverage. Do not include prose."
-        ),
-        messages=[
-            {
-                "role": "user",
-                "content": f"Find {count} diverse playable coordinates matching: {description}",
-            }
-        ],
-    )
-    raw = message.content[0].text if message.content else "[]"
-    parsed = [Coordinate(**item) for item in _extract_json(raw)]
+    try:
+        client = Anthropic(api_key=settings.anthropic_api_key)
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=900,
+            temperature=0.2,
+            system=(
+                "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
+                "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
+                "locations likely to have Google Street View coverage. Do not include prose."
+            ),
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Find {count} diverse playable coordinates matching: {description}",
+                }
+            ],
+        )
+        raw = message.content[0].text if message.content else "[]"
+        parsed = [Coordinate(**item) for item in _extract_json(raw)]
+    except Exception:
+        return _fallback_for_query(description, count)
     verified: list[Coordinate] = []
     for point in parsed:
         if await has_street_view_coverage(point.lat, point.lng):

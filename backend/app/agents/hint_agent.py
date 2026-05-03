@@ -34,20 +34,20 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
     settings = get_settings()
     hints = _fallback_hints(lat, lng)
     if settings.anthropic_api_key:
-        client = Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=450,
-            temperature=0.1,
-            system=(
-                "You are the Hint Agent for an AI GeoGuessr-like game. Given coordinates, infer "
-                "likely visual clues from road signs, language, architecture, vegetation, road "
-                "markings, and license plates. Return only a JSON array of exactly three strings: "
-                "level 1 continent, level 2 country, level 3 region/city. No coordinates."
-            ),
-            messages=[{"role": "user", "content": f"Coordinates: {lat}, {lng}"}],
-        )
         try:
+            client = Anthropic(api_key=settings.anthropic_api_key)
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=450,
+                temperature=0.1,
+                system=(
+                    "You are the Hint Agent for an AI GeoGuessr-like game. Given coordinates, infer "
+                    "likely visual clues from road signs, language, architecture, vegetation, road "
+                    "markings, and license plates. Return only a JSON array of exactly three strings: "
+                    "level 1 continent, level 2 country, level 3 region/city. No coordinates."
+                ),
+                messages=[{"role": "user", "content": f"Coordinates: {lat}, {lng}"}],
+            )
             hints = _parse_hints(message.content[0].text if message.content else "[]")
         except Exception:
             hints = _fallback_hints(lat, lng)
@@ -58,4 +58,3 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
         "hint": hints[level - 1],
         "max_score_multiplier": HINT_MULTIPLIERS[level],
     }
-

@@ -1,10 +1,9 @@
-import { supabase } from "./supabase";
+import { getAuthToken } from "./auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

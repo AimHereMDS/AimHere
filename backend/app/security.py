@@ -1,78 +1,80 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from datetime import datetime, timedelta, timezone
+import base64
+import hashlib
+import hmac
+import os
 from typing import Any
+from uuid import uuid4
 
-import httpx
 import jwt
 from fastapi import Depends, Header, HTTPException, status
-from jwt import PyJWKClient
 from sqlalchemy.orm import Session
 
 from app.database import get_db, get_settings
 from app.models.user import UserProfile
 
-
-@lru_cache
-def jwks_client() -> PyJWKClient | None:
-    settings = get_settings()
-    if not settings.supabase_url:
-        return None
-    return PyJWKClient(f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json")
+HASH_ITERATIONS = 210_000
+TOKEN_ALGORITHM = "HS256"
+TOKEN_TTL_HOURS = 24 * 14
 
 
-async def decode_supabase_token(token: str) -> dict[str, Any]:
-    settings = get_settings()
-    if not settings.supabase_url:
-        return {"sub": "local-user", "email": "local@example.com", "user_metadata": {"name": "Local Player"}}
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, HASH_ITERATIONS)
+    return (
+        f"pbkdf2_sha256${HASH_ITERATIONS}$"
+        f"{base64.b64encode(salt).decode()}$"
+        f"{base64.b64encode(digest).decode()}"
+    )
+
+
+def verify_password(password: str, stored_hash: str | None) -> bool:
+    if not stored_hash:
+        return False
     try:
-        client = jwks_client()
-        if client is None:
-            raise ValueError("JWKS client not configured")
-        signing_key = client.get_signing_key_from_jwt(token)
-        return jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "ES256"],
-            audience="authenticated",
-            options={"verify_exp": True},
-        )
+        algorithm, iterations, salt_b64, digest_b64 = stored_hash.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(digest_b64)
+        actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
+        return hmac.compare_digest(actual, expected)
     except Exception:
-        async with httpx.AsyncClient(timeout=8) as http:
-            response = await http.get(
-                f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
-                headers={"apikey": settings.supabase_anon_key, "Authorization": f"Bearer {token}"},
-            )
-        if response.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Supabase token")
-        user = response.json()
-        return {
-            "sub": user["id"],
-            "email": user.get("email"),
-            "user_metadata": user.get("user_metadata") or {},
-        }
+        return False
 
 
-async def get_current_user_payload(authorization: str | None = Header(default=None)) -> dict[str, Any]:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
-    return await decode_supabase_token(authorization.split(" ", 1)[1])
+def create_access_token(user: UserProfile) -> str:
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": user.id,
+        "email": user.email,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=TOKEN_TTL_HOURS)).timestamp()),
+    }
+    return jwt.encode(payload, settings.auth_secret_key, algorithm=TOKEN_ALGORITHM)
 
 
-def ensure_user_profile(db: Session, payload: dict[str, Any]) -> UserProfile:
-    user_id = str(payload.get("sub"))
-    email = str(payload.get("email") or f"{user_id}@unknown.local")
-    metadata = payload.get("user_metadata") or {}
-    profile = db.get(UserProfile, user_id)
-    if profile:
-        if profile.email != email:
-            profile.email = email
-        return profile
+def decode_access_token(token: str) -> dict[str, Any]:
+    settings = get_settings()
+    try:
+        return jwt.decode(token, settings.auth_secret_key, algorithms=[TOKEN_ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+
+def create_user_profile(db: Session, email: str, password: str) -> UserProfile:
+    normalized_email = email.strip().lower()
+    existing = db.query(UserProfile).filter(UserProfile.email == normalized_email).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
     profile = UserProfile(
-        id=user_id,
-        email=email,
-        display_name=metadata.get("name") or metadata.get("full_name") or email.split("@")[0],
-        avatar_url=metadata.get("avatar_url"),
+        id=str(uuid4()),
+        email=normalized_email,
+        password_hash=hash_password(password),
+        display_name=normalized_email.split("@")[0],
     )
     db.add(profile)
     db.commit()
@@ -80,9 +82,26 @@ def ensure_user_profile(db: Session, payload: dict[str, Any]) -> UserProfile:
     return profile
 
 
+def authenticate_user(db: Session, email: str, password: str) -> UserProfile:
+    normalized_email = email.strip().lower()
+    profile = db.query(UserProfile).filter(UserProfile.email == normalized_email).first()
+    if not profile or not verify_password(password, profile.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    return profile
+
+
+async def get_current_user_payload(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+    return decode_access_token(authorization.split(" ", 1)[1])
+
+
 async def get_current_user(
     payload: dict[str, Any] = Depends(get_current_user_payload),
     db: Session = Depends(get_db),
 ) -> UserProfile:
-    return ensure_user_profile(db, payload)
-
+    user_id = str(payload.get("sub") or "")
+    profile = db.get(UserProfile, user_id)
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+    return profile
