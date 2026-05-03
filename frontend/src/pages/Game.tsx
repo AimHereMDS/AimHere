@@ -107,7 +107,6 @@ export function Game() {
 
   return (
     <main className="relative h-screen overflow-hidden bg-black">
-      {/* StreetView — full screen */}
       <div className="absolute inset-0">
         <StreetViewPanorama
           className="relative h-full overflow-hidden bg-slate-200"
@@ -117,7 +116,6 @@ export function Game() {
         />
       </div>
 
-      {/* Top overlay — round info + timer + score */}
       <div className="absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-4 pointer-events-none">
         <div className="rounded-lg bg-black/60 px-4 py-2 text-white backdrop-blur-sm pointer-events-auto">
           <h1 className="text-lg font-bold">Round {roundIndex} of 5</h1>
@@ -138,37 +136,32 @@ export function Game() {
         </div>
       </div>
 
-      {/* Bottom-left overlay — ScoreBoard + Hints */}
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
         <ScoreBoard rounds={game.rounds} />
         <HintPanel disabled={roundComplete} location={current} onHintUsed={setHintsUsed} />
       </div>
 
-      {/* Bottom-right overlay — Map + Submit */}
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
-        {/* Result info */}
         {result && (
           <div className="w-full rounded-lg bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
             <h2 className="font-semibold">{formatKm(result.distance_km)} away</h2>
             <p className="text-sm text-white/70">Round score: {result.score.toLocaleString()}</p>
             {result.ai_guess && (
-              <p className="mt-2 text-xs text-white/60">
+              <p className="mt-2 line-clamp-3 text-xs text-white/60">
                 AI: {formatKm(result.ai_distance_km ?? 0)} away · {result.ai_guess.explanation}
               </p>
             )}
           </div>
         )}
 
-        {/* Map */}
         <div
           className={`overflow-hidden rounded-xl border-2 border-white/30 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-80 w-[440px]" : "h-52 w-72"}`}
           onMouseEnter={() => setMapExpanded(true)}
-          onMouseLeave={() => { if (!roundComplete) setMapExpanded(false); }}
+          onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
         >
           <GuessMap aiGuess={aiGuess} guess={guess} locked={roundComplete} onGuess={setGuess} real={result ? current : undefined} />
         </div>
 
-        {/* Submit / Next button */}
         {!result ? (
           <div className="flex items-center gap-2">
             {guess && (
