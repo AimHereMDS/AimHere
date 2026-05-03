@@ -5,6 +5,7 @@ import base64
 import hashlib
 import hmac
 import os
+from typing import Any
 from uuid import uuid4
 
 import jwt
@@ -56,7 +57,7 @@ def create_access_token(user: UserProfile) -> str:
     return jwt.encode(payload, settings.auth_secret_key, algorithm=TOKEN_ALGORITHM)
 
 
-def decode_access_token(token: str) -> dict[str, str]:
+def decode_access_token(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
         return jwt.decode(token, settings.auth_secret_key, algorithms=[TOKEN_ALGORITHM])
@@ -89,14 +90,14 @@ def authenticate_user(db: Session, email: str, password: str) -> UserProfile:
     return profile
 
 
-async def get_current_user_payload(authorization: str | None = Header(default=None)) -> dict[str, str]:
+async def get_current_user_payload(authorization: str | None = Header(default=None)) -> dict[str, Any]:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
     return decode_access_token(authorization.split(" ", 1)[1])
 
 
 async def get_current_user(
-    payload: dict[str, str] = Depends(get_current_user_payload),
+    payload: dict[str, Any] = Depends(get_current_user_payload),
     db: Session = Depends(get_db),
 ) -> UserProfile:
     user_id = str(payload.get("sub") or "")

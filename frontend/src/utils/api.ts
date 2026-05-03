@@ -1,8 +1,9 @@
+import { getAuthToken } from "./auth";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const TOKEN_KEY = "aim-here-auth-token";
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

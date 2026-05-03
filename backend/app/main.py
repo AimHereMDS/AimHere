@@ -21,6 +21,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
+    if settings.auth_secret_key == "change-me-local-dev-secret" and not settings.supabase_db_url.startswith("sqlite"):
+        raise RuntimeError("AUTH_SECRET_KEY must be set to a strong random value in non-SQLite environments")
     Base.metadata.create_all(bind=engine)
     inspector = inspect(engine)
     user_columns = {column["name"] for column in inspector.get_columns("users")}
