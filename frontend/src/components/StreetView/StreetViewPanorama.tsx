@@ -7,9 +7,10 @@ type Props = {
   location: Coordinate;
   movementMode: MovementMode;
   movementLimit: number;
+  className?: string;
 };
 
-export function StreetViewPanorama({ location, movementMode, movementLimit }: Props) {
+export function StreetViewPanorama({ location, movementMode, movementLimit, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const previousPanoRef = useRef<string | null>(null);
@@ -69,7 +70,7 @@ export function StreetViewPanorama({ location, movementMode, movementLimit }: Pr
   }, [location.lat, location.lng, movementMode, movementLimit]);
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden rounded-lg border border-slate-200 bg-slate-200">
+    <div className={className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-slate-200 bg-slate-200"}>
       <div ref={containerRef} className="h-full w-full" />
       <div className="absolute left-3 top-3 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-slate-700 shadow">
         {movementMode === "rotation" && "Rotation only"}
