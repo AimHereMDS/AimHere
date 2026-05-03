@@ -98,6 +98,6 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked }: Props) {
     }
   }, [guess, real, aiGuess]);
 
-  return <div ref={containerRef} className="h-full min-h-[420px] w-full rounded-lg border border-slate-200 bg-slate-100" />;
+  return <div ref={containerRef} className="h-full w-full rounded-lg border border-slate-200 bg-slate-100" />;
 }
 
