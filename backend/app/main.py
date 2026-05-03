@@ -1,0 +1,35 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import Base, engine, get_settings
+from app.models import game, round, score, user  # noqa: F401
+from app.routers import auth, game as game_router, leaderboard, locations
+
+settings = get_settings()
+
+app = FastAPI(title="AIm Here API", version="1.0.0")
+origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins or ["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+def startup() -> None:
+    Base.metadata.create_all(bind=engine)
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+app.include_router(auth.router)
+app.include_router(game_router.router)
+app.include_router(locations.router)
+app.include_router(leaderboard.router)
+
