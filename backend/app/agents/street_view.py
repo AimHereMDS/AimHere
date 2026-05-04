@@ -65,6 +65,9 @@ async def street_view_static_image(lat: float, lng: float) -> StreetViewImage | 
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.get("https://maps.googleapis.com/maps/api/streetview", params=params)
             response.raise_for_status()
+            sv_status = response.headers.get("X-Google-Street-View-Status", "OK")
+            if sv_status != "OK":
+                return None
             content_type = response.headers.get("content-type", "image/jpeg").split(";")[0]
             if not content_type.startswith("image/"):
                 return None

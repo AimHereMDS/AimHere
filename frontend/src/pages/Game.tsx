@@ -1,5 +1,5 @@
 import { Bot, Clock, Flag, MapPin, Trophy } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { submitPveRound } from "../agents/opponentAgent";
@@ -55,15 +55,7 @@ export function Game() {
 
   const canSubmit = Boolean(guess && current && !result && !busy);
 
-  useEffect(() => {
-    if (secondsLeft === 0 && canSubmit && !timerSubmitRef.current) {
-      timerSubmitRef.current = true;
-      void submitRound();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft, canSubmit]);
-
-  async function submitRound() {
+  const submitRound = useCallback(async () => {
     if (!game || !guess || !current) return;
     setBusy(true);
     setError("");
@@ -93,7 +85,14 @@ export function Game() {
     } finally {
       setBusy(false);
     }
-  }
+  }, [game, guess, current, roundIndex, hintsUsed]);
+
+  useEffect(() => {
+    if (secondsLeft === 0 && canSubmit && !timerSubmitRef.current) {
+      timerSubmitRef.current = true;
+      void submitRound();
+    }
+  }, [secondsLeft, canSubmit, submitRound]);
 
   async function nextRound() {
     if (!game || !guess || !current || !result) return;

@@ -74,15 +74,6 @@ export function Results() {
         </Link>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-5">
-        {game.rounds.map((round) => (
-          <div className="panel-soft p-4" key={round.index}>
-            <div className="text-sm font-black text-slate-400">Round {round.index}</div>
-            <div className="mt-2 text-xl font-black text-white">{round.result.score.toLocaleString()}</div>
-            <div className="mt-1 text-sm text-slate-300">{formatKm(round.result.distance_km)}</div>
-          </div>
-        ))}
-      </div>
     </main>
   );
 }

@@ -1,3 +1,14 @@
+export function markerIcon(fillColor: string, strokeColor: string, scale: number): google.maps.Symbol {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    scale,
+    fillColor,
+    fillOpacity: 1,
+    strokeColor,
+    strokeWeight: 2,
+  };
+}
+
 export const darkMapStyles: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },

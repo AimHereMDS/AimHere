@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { PlayedRound } from "../../types/game";
-import { darkMapStyles } from "../../utils/mapStyles";
+import { darkMapStyles, markerIcon } from "../../utils/mapStyles";
 
 export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -70,13 +70,3 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
   return <div ref={containerRef} className="h-[520px] overflow-hidden rounded-lg border border-white/10 bg-slate-950" />;
 }
 
-function markerIcon(fillColor: string, strokeColor: string, scale: number): google.maps.Symbol {
-  return {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale,
-    fillColor,
-    fillOpacity: 1,
-    strokeColor,
-    strokeWeight: 2,
-  };
-}

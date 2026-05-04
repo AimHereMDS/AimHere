@@ -29,7 +29,7 @@ export function Home() {
               challenge an AI opponent over five fast rounds.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link className="btn-gg" to={user ? "/setup" : "/"}>
+              <Link className="btn-gg" to={user ? "/setup" : "/#auth"}>
                 <MapPinned size={19} strokeWidth={3} />
                 Play now
               </Link>
@@ -44,7 +44,7 @@ export function Home() {
               <Stat label="Agents" value="3" />
             </div>
           </div>
-          <div className="relative">
+          <div className="relative" id="auth">
             {user ? (
               <div className="panel p-6">
                 <div className="chip chip-amber mb-4">

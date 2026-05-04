@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { Coordinate } from "../../types/game";
-import { darkMapStyles } from "../../utils/mapStyles";
+import { darkMapStyles, markerIcon } from "../../utils/mapStyles";
 
 type Props = {
   guess: Coordinate | null;
@@ -130,13 +130,3 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked }: Props) {
   );
 }
 
-function markerIcon(fillColor: string, strokeColor: string, scale: number): google.maps.Symbol {
-  return {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale,
-    fillColor,
-    fillOpacity: 1,
-    strokeColor,
-    strokeWeight: 2,
-  };
-}

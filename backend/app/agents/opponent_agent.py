@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import random
 
 from anthropic import Anthropic
@@ -9,6 +10,8 @@ from anthropic import Anthropic
 from app.agents.geo import coordinate_with_offset
 from app.agents.street_view import street_view_static_image
 from app.database import get_settings
+
+logger = logging.getLogger(__name__)
 
 DIFFICULTY_RANGES_KM = {
     "easy": (900, 2800),
@@ -85,8 +88,8 @@ async def opponent_guess(lat: float, lng: float, difficulty: str = "medium") -> 
                 messages=[{"role": "user", "content": content}],
             )
             explanation = _parse_explanation(message.content[0].text if message.content else "") or explanation
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Opponent Agent fell back to static explanation: %s", exc)
     return {
         "lat": guess_lat,
         "lng": guess_lng,

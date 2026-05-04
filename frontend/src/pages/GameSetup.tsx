@@ -226,7 +226,7 @@ function ChoiceGroup<T extends string>({
           <button
             className={`rounded-lg border p-4 text-left transition ${
               active
-                ? "border-teal-300 bg-teal-300/12 shadow-[0_0_0_3px_rgba(45,212,191,0.12)]"
+                ? "border-teal-300 bg-teal-300/[0.12] shadow-[0_0_0_3px_rgba(45,212,191,0.12)]"
                 : "border-white/10 bg-slate-950/35 hover:border-teal-300/45"
             }`}
             key={option.value}

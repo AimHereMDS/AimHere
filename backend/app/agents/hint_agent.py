@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from anthropic import Anthropic
 
 from app.database import get_settings
 from app.agents.street_view import street_view_static_image
+
+logger = logging.getLogger(__name__)
 
 HINT_MULTIPLIERS = {1: 0.85, 2: 0.7, 3: 0.55}
 
@@ -72,7 +75,8 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
                 messages=[{"role": "user", "content": content}],
             )
             hints = _parse_hints(message.content[0].text if message.content else "[]")
-        except Exception:
+        except Exception as exc:
+            logger.warning("Hint Agent fell back to static hints: %s", exc)
             hints = _fallback_hints(lat, lng)
     titles = {1: "Continental clue", 2: "Country clue", 3: "Regional clue"}
     return {
