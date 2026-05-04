@@ -9,12 +9,12 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 - User profile stats: games played, total score, average score, best score, and streaks.
 - Global leaderboard from Supabase PostgreSQL.
 - Default mode generates random Street View-covered coordinates at runtime.
-- Custom and predefined filters use the Curator Agent.
+- Custom filters use the Curator Agent, then snap candidates toward playable Street View panoramas when Google Maps metadata is available.
 - Interactive `StreetViewPanorama`, not static images.
 - Rotation-only, limited-movement, and full-movement modes.
 - Five-round single-player gameplay.
-- PvE mode with easy, medium, and hard AI opponent guesses.
-- Progressive Hint Agent with score penalties.
+- PvE mode with easy, medium, and hard AI opponent guesses, plus optional Street View image context for AI reasoning.
+- Progressive Hint Agent with score penalties and optional Street View image context.
 - End-game summary map with real locations, guesses, and connecting lines.
 
 ## Tech Stack

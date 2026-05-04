@@ -5,6 +5,7 @@ import json
 from anthropic import Anthropic
 
 from app.database import get_settings
+from app.agents.street_view import street_view_static_image
 
 HINT_MULTIPLIERS = {1: 0.85, 2: 0.7, 3: 0.55}
 
@@ -35,6 +36,27 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
     hints = _fallback_hints(lat, lng)
     if settings.anthropic_api_key:
         try:
+            image = await street_view_static_image(lat, lng)
+            content: list[dict] = [
+                {
+                    "type": "text",
+                    "text": (
+                        f"Coordinates: {lat}, {lng}. Return three progressive hints. "
+                        "If an image is present, prioritize visible scene clues over coordinate-only context."
+                    ),
+                }
+            ]
+            if image:
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image["media_type"],
+                            "data": image["data"],
+                        },
+                    }
+                )
             client = Anthropic(api_key=settings.anthropic_api_key)
             message = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
@@ -43,10 +65,11 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
                 system=(
                     "You are the Hint Agent for an AI GeoGuessr-like game. Given coordinates, infer "
                     "likely visual clues from road signs, language, architecture, vegetation, road "
-                    "markings, and license plates. Return only a JSON array of exactly three strings: "
+                    "markings, and license plates. When an image is supplied, analyze it directly. "
+                    "Return only a JSON array of exactly three strings: "
                     "level 1 continent, level 2 country, level 3 region/city. No coordinates."
                 ),
-                messages=[{"role": "user", "content": f"Coordinates: {lat}, {lng}"}],
+                messages=[{"role": "user", "content": content}],
             )
             hints = _parse_hints(message.content[0].text if message.content else "[]")
         except Exception:

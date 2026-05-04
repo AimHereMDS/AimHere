@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.agents.curator_agent import curate_locations, has_street_view_coverage
+from app.agents.curator_agent import curate_locations
 from app.agents.geo import random_land_coordinate
 from app.agents.hint_agent import progressive_hint
+from app.agents.street_view import nearest_street_view_coordinate
 from app.schemas import Coordinate, HintRequest, HintResponse, LocationRequest, LocationResponse
 from app.security import get_current_user_payload
 
@@ -17,8 +18,9 @@ async def random_street_view_locations(count: int = 5) -> list[Coordinate]:
     while len(locations) < count and attempts < count * 80:
         attempts += 1
         lat, lng = random_land_coordinate()
-        if await has_street_view_coverage(lat, lng):
-            locations.append(Coordinate(lat=lat, lng=lng, label="Random Street View"))
+        snapped = await nearest_street_view_coordinate(lat, lng, radius=50000, label="Random Street View")
+        if snapped:
+            locations.append(snapped)
     if len(locations) < count:
         locations.extend(await curate_locations("diverse world cities", count - len(locations)))
     return locations[:count]
@@ -40,4 +42,3 @@ async def create_locations(
 @router.post("/hint", response_model=HintResponse)
 async def hint(request: HintRequest, _: dict = Depends(get_current_user_payload)) -> dict:
     return await progressive_hint(request.lat, request.lng, request.used_levels)
-

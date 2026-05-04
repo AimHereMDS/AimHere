@@ -21,11 +21,12 @@ export function Leaderboard() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-3xl font-bold text-ink">Global leaderboard</h1>
-      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <main className="app-shell mx-auto max-w-5xl px-4 py-8">
+      <div className="chip chip-amber mb-3">Rankings</div>
+      <h1 className="text-3xl font-black text-white">Global leaderboard</h1>
+      <div className="panel mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="bg-white/5 text-slate-300">
             <tr>
               <th className="px-4 py-3">Rank</th>
               <th className="px-4 py-3">Player</th>
@@ -36,7 +37,7 @@ export function Leaderboard() {
           </thead>
           <tbody>
             {entries.map((entry) => (
-              <tr className="border-t border-slate-100" key={entry.user_id}>
+              <tr className="border-t border-white/10 text-slate-200" key={entry.user_id}>
                 <td className="px-4 py-3 font-semibold">{entry.rank}</td>
                 <td className="px-4 py-3">{entry.display_name || "Player"}</td>
                 <td className="px-4 py-3">{entry.best_score.toLocaleString()}</td>
@@ -46,9 +47,8 @@ export function Leaderboard() {
             ))}
           </tbody>
         </table>
-        {!entries.length && <div className="p-6 text-slate-500">{error || "No completed games yet."}</div>}
+        {!entries.length && <div className="p-6 text-slate-400">{error || "No completed games yet."}</div>}
       </div>
     </main>
   );
 }
-

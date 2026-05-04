@@ -6,7 +6,7 @@ export type Coordinate = {
 
 export type MovementMode = "rotation" | "limited" | "full";
 export type GameMode = "single" | "pve";
-export type LocationMode = "default" | "custom" | "country" | "continent" | "urban" | "rural" | "famous";
+export type LocationMode = "default" | "custom" | "filter" | "country" | "continent" | "urban" | "rural" | "famous";
 export type AiDifficulty = "easy" | "medium" | "hard";
 
 export type GameSetup = {
@@ -70,4 +70,3 @@ export type Profile = {
   best_streak: number;
   average_score: number;
 };
-
