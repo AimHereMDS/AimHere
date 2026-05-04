@@ -31,6 +31,8 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 3. Create an Anthropic API key.
 4. Copy `.env.example` to `.env` and fill in values.
 
+The backend uses `ANTHROPIC_MODEL=claude-sonnet-4-20250514` by default. Override it in `.env` if your Anthropic account requires a different available model.
+
 Backend:
 ```bash
 cd backend

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 from typing import Any
 
@@ -9,6 +10,8 @@ from anthropic import Anthropic
 from app.database import get_settings
 from app.schemas import Coordinate
 from app.agents.street_view import nearest_street_view_coordinate
+
+logger = logging.getLogger(__name__)
 
 REGION_BOUNDS: dict[str, tuple[float, float, float, float]] = {
     "romania": (43.6, 48.4, 20.2, 29.8),
@@ -78,7 +81,7 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
     try:
         client = Anthropic(api_key=settings.anthropic_api_key)
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=settings.anthropic_model,
             max_tokens=900,
             temperature=0.2,
             system=(
@@ -97,7 +100,8 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
         )
         raw = message.content[0].text if message.content else "[]"
         parsed = [Coordinate(**item) for item in _extract_json(raw)]
-    except Exception:
+    except Exception as exc:
+        logger.warning("Curator Agent fell back to static coordinates: %s", exc)
         return _fallback_for_query(description, count)
     verified: list[Coordinate] = []
     for point in parsed:

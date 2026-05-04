@@ -59,7 +59,7 @@ async def progressive_hint(lat: float, lng: float, used_levels: int) -> dict[str
                 )
             client = Anthropic(api_key=settings.anthropic_api_key)
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=settings.anthropic_model,
                 max_tokens=450,
                 temperature=0.1,
                 system=(
