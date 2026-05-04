@@ -1,5 +1,5 @@
-import { Clock, Flag, MapPin } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Bot, Clock, Flag, MapPin, Trophy } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { submitPveRound } from "../agents/opponentAgent";
@@ -24,8 +24,10 @@ export function Game() {
   const [result, setResult] = useState<RoundResult | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [secondsLeft, setSecondsLeft] = useState<number | null>(game?.setup.timer_seconds ?? null);
   const [mapExpanded, setMapExpanded] = useState(false);
+  const timerSubmitRef = useRef(false);
 
   const roundIndex = (game?.rounds.length ?? 0) + 1;
   const current = game?.locations[roundIndex - 1] ?? null;
@@ -53,31 +55,44 @@ export function Game() {
 
   const canSubmit = Boolean(guess && current && !result && !busy);
 
-  async function submitRound() {
+  const submitRound = useCallback(async () => {
     if (!game || !guess || !current) return;
     setBusy(true);
-    const payload = {
-      round_index: roundIndex,
-      real: current,
-      guess,
-      hint_count: hintsUsed,
-      ai_difficulty: game.setup.ai_difficulty,
-    };
-    const response =
-      game.mode === "pve"
-        ? await submitPveRound({
-            gameId: game.id,
-            roundIndex,
-            real: current,
-            guess,
-            hintCount: hintsUsed,
-            aiDifficulty: game.setup.ai_difficulty ?? "medium",
-          })
-        : await apiFetch<RoundResult>(`/games/${game.id}/rounds`, { method: "POST", body: JSON.stringify(payload) });
-    setResult(response);
-    setMapExpanded(true);
-    setBusy(false);
-  }
+    setError("");
+    try {
+      const payload = {
+        round_index: roundIndex,
+        real: current,
+        guess,
+        hint_count: hintsUsed,
+        ai_difficulty: game.setup.ai_difficulty,
+      };
+      const response =
+        game.mode === "pve"
+          ? await submitPveRound({
+              gameId: game.id,
+              roundIndex,
+              real: current,
+              guess,
+              hintCount: hintsUsed,
+              aiDifficulty: game.setup.ai_difficulty ?? "medium",
+            })
+          : await apiFetch<RoundResult>(`/games/${game.id}/rounds`, { method: "POST", body: JSON.stringify(payload) });
+      setResult(response);
+      setMapExpanded(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit round");
+    } finally {
+      setBusy(false);
+    }
+  }, [game, guess, current, roundIndex, hintsUsed]);
+
+  useEffect(() => {
+    if (secondsLeft === 0 && canSubmit && !timerSubmitRef.current) {
+      timerSubmitRef.current = true;
+      void submitRound();
+    }
+  }, [secondsLeft, canSubmit, submitRound]);
 
   async function nextRound() {
     if (!game || !guess || !current || !result) return;
@@ -97,7 +112,9 @@ export function Game() {
     setGuess(null);
     setResult(null);
     setHintsUsed(0);
+    setError("");
     setMapExpanded(false);
+    timerSubmitRef.current = false;
     setSecondsLeft(game.setup.timer_seconds ?? null);
   }
 
@@ -106,7 +123,7 @@ export function Game() {
   if (!game || !current) return null;
 
   return (
-    <main className="relative h-screen overflow-hidden bg-black">
+    <main className="relative h-[calc(100vh-72px)] overflow-hidden bg-black">
       <div className="absolute inset-0">
         <StreetViewPanorama
           className="relative h-full overflow-hidden bg-slate-200"
@@ -116,21 +133,28 @@ export function Game() {
         />
       </div>
 
-      <div className="absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-4 pointer-events-none">
-        <div className="rounded-lg bg-black/60 px-4 py-2 text-white backdrop-blur-sm pointer-events-auto">
-          <h1 className="text-lg font-bold">Round {roundIndex} of 5</h1>
-          <p className="text-xs text-white/70">
-            {game.mode === "pve" ? "PvE match" : "Single player"} · {game.setup.movement_mode} movement
+      <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-4">
+        <div className="panel-soft pointer-events-auto px-4 py-3 text-white">
+          <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Round {roundIndex} / 5</div>
+          <p className="mt-1 text-sm text-white/75">
+            {game.mode === "pve" ? "PvE match" : "Solo match"} / {game.setup.movement_mode} movement
           </p>
         </div>
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-2">
           {secondsLeft !== null && (
-            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 font-semibold backdrop-blur-sm ${secondsLeft === 0 ? "bg-red-600/80 text-white" : "bg-black/60 text-white"}`}>
+            <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 font-black backdrop-blur-sm ${secondsLeft <= 10 ? "border-red-400/50 bg-red-600/70 text-white" : "border-white/10 bg-black/55 text-white"}`}>
               <Clock size={18} />
               {secondsLeft}s
             </div>
           )}
-          <div className="rounded-lg bg-black/60 px-3 py-2 font-semibold text-white backdrop-blur-sm">
+          {game.mode === "pve" && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 font-black text-amber-200 backdrop-blur-sm">
+              <Bot size={18} />
+              AI {game.rounds.reduce((sum, round) => sum + (round.result.ai_score ?? 0), 0).toLocaleString()}
+            </div>
+          )}
+          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/55 px-3 py-2 font-black text-white backdrop-blur-sm">
+            <Trophy size={18} />
             {totalScore(game.rounds).toLocaleString()} pts
           </div>
         </div>
@@ -138,24 +162,30 @@ export function Game() {
 
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
         <ScoreBoard rounds={game.rounds} />
-        <HintPanel disabled={roundComplete} location={current} onHintUsed={setHintsUsed} />
+        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintUsed={setHintsUsed} />
       </div>
 
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
         {result && (
-          <div className="w-full rounded-lg bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
-            <h2 className="font-semibold">{formatKm(result.distance_km)} away</h2>
-            <p className="text-sm text-white/70">Round score: {result.score.toLocaleString()}</p>
+          <div className="panel-soft w-full max-w-[440px] px-4 py-3 text-white">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Your guess</div>
+            <h2 className="mt-1 text-2xl font-black">+{result.score.toLocaleString()}</h2>
+            <p className="text-sm text-white/70">{formatKm(result.distance_km)} away</p>
             {result.ai_guess && (
-              <p className="mt-2 line-clamp-3 text-xs text-white/60">
-                AI: {formatKm(result.ai_distance_km ?? 0)} away · {result.ai_guess.explanation}
-              </p>
+              <div className="mt-3 border-t border-white/10 pt-3">
+                <div className="flex items-center gap-2 text-sm font-black text-amber-200">
+                  <Bot size={16} />
+                  AI +{(result.ai_score ?? 0).toLocaleString()} / {formatKm(result.ai_distance_km ?? 0)} away
+                </div>
+                <p className="mt-1 text-xs leading-5 text-white/65">{result.ai_guess.explanation}</p>
+              </div>
             )}
           </div>
         )}
+        {error && <div className="max-w-[440px] rounded-md border border-red-400/40 bg-red-600/30 px-4 py-2 text-sm text-red-100 backdrop-blur">{error}</div>}
 
         <div
-          className={`overflow-hidden rounded-xl border-2 border-white/30 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-80 w-[440px]" : "h-52 w-72"}`}
+          className={`overflow-hidden rounded-xl border-2 border-white/25 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-80 w-[440px]" : "h-52 w-72"}`}
           onMouseEnter={() => setMapExpanded(true)}
           onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
         >
@@ -171,7 +201,7 @@ export function Game() {
               </div>
             )}
             <button
-              className="flex items-center gap-2 rounded-lg bg-field px-4 py-2 font-semibold text-white shadow-lg disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-teal-400 px-4 py-2 font-black text-slate-950 shadow-lg disabled:opacity-50"
               disabled={!canSubmit || secondsLeft === 0}
               onClick={submitRound}
               type="button"
@@ -182,7 +212,7 @@ export function Game() {
           </div>
         ) : (
           <button
-            className="rounded-lg bg-ink px-5 py-3 font-semibold text-white shadow-lg"
+            className="rounded-lg bg-slate-950 px-5 py-3 font-black text-white shadow-lg ring-1 ring-white/10"
             onClick={nextRound}
             type="button"
           >

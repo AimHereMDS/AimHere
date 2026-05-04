@@ -29,8 +29,8 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
       setBlocked(false);
       const panorama = new google.maps.StreetViewPanorama(containerRef.current, {
         position: location,
-        pov: { heading: 20, pitch: 0 },
-        zoom: 0,
+        pov: { heading: Math.random() * 360, pitch: 0 },
+        zoom: 1,
         addressControl: false,
         fullscreenControl: true,
         motionTracking: false,
@@ -39,7 +39,7 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
         zoomControl: true,
         linksControl: movementMode !== "rotation",
         clickToGo: movementMode !== "rotation",
-        showRoadLabels: true,
+        showRoadLabels: false,
       });
       panoramaRef.current = panorama;
       listener = panorama.addListener("pano_changed", () => {
@@ -70,19 +70,18 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
   }, [location.lat, location.lng, movementMode, movementLimit]);
 
   return (
-    <div className={className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-slate-200 bg-slate-200"}>
+    <div className={className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-slate-950"}>
       <div ref={containerRef} className="h-full w-full" />
-      <div className="absolute left-3 top-3 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-slate-700 shadow">
+      <div className="absolute left-3 top-3 rounded-md border border-white/10 bg-slate-950/75 px-3 py-2 text-sm font-semibold text-white shadow backdrop-blur">
         {movementMode === "rotation" && "Rotation only"}
         {movementMode === "limited" && `Limited movement: ${depth}/${movementLimit}`}
         {movementMode === "full" && "Full movement"}
       </div>
       {blocked && (
-        <div className="absolute bottom-3 left-3 right-3 rounded-md bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-900 shadow">
+        <div className="absolute bottom-3 left-3 right-3 rounded-md border border-amber-300/40 bg-amber-400/90 px-3 py-2 text-sm font-black text-slate-950 shadow">
           Movement limit reached. The panorama was returned to the allowed route.
         </div>
       )}
     </div>
   );
 }
-

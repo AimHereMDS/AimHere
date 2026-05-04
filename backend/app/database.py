@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     supabase_db_url: str = "sqlite:///./aimhere.db"
     auth_secret_key: str = "change-me-local-dev-secret"
     anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-20250514"
     google_maps_api_key: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 

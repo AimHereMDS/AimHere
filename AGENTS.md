@@ -51,9 +51,9 @@ Output:
 }
 ```
 
-Prompt pattern: ask Claude to infer likely visual clues from road signs, language, architecture, vegetation, road markings, and license plates, returning exactly three progressive strings.
+Prompt pattern: ask Claude to infer likely visual clues from road signs, language, architecture, vegetation, road markings, and license plates, returning exactly three progressive strings. When both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY` are configured, the backend also fetches a Google Street View Static image and sends it to Claude as image context.
 
-Known limitations: the current backend receives panorama coordinates, not raw imagery. Visual clue language is inferred from location context.
+Known limitations: without a Google Maps key, or if the static image request fails, visual clue language falls back to coordinate-based context.
 
 ## Opponent Agent
 
@@ -78,9 +78,9 @@ Output:
 }
 ```
 
-Prompt pattern: ask Claude for concise GeoGuessr-style reasoning while deterministic geodesic noise enforces difficulty ranges.
+Prompt pattern: ask Claude for concise GeoGuessr-style reasoning, optionally with a Street View Static image when Google Maps is configured, while deterministic geodesic noise enforces difficulty ranges.
 
-Known limitations: the explanation is AI-generated from coordinates and may mention plausible clues rather than verified OCR.
+Known limitations: without image context, the explanation is AI-generated from coordinates and may mention plausible clues rather than verified OCR.
 
 ## Running Evals
 
@@ -94,4 +94,3 @@ Eval coverage:
 - `test_curator_agent.py`: checks requested geographic regions.
 - `test_hint_agent.py`: checks progressive hint format and score multipliers.
 - `test_opponent_agent.py`: checks difficulty distance ranges.
-

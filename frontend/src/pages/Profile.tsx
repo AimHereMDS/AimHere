@@ -11,8 +11,8 @@ export function Profile() {
     apiFetch<ProfileType>("/auth/me").then(setProfile).catch((err) => setError(err instanceof Error ? err.message : "Could not load profile"));
   }, []);
 
-  if (error) return <main className="p-8 text-red-700">{error}</main>;
-  if (!profile) return <main className="p-8 text-slate-600">Loading profile...</main>;
+  if (error) return <main className="app-shell p-8 text-red-300">{error}</main>;
+  if (!profile) return <main className="app-shell p-8 text-slate-300">Loading profile...</main>;
 
   const stats = [
     ["Games played", profile.games_played],
@@ -24,22 +24,22 @@ export function Profile() {
   ];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-panel">
+    <main className="app-shell mx-auto max-w-5xl px-4 py-8">
+      <div className="panel p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-md bg-field text-2xl font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-md bg-teal-400 text-2xl font-black text-slate-950 shadow-[0_4px_0_#0f766e]">
             {(profile.display_name || profile.email).slice(0, 1).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-ink">{profile.display_name || "Player"}</h1>
-            <p className="text-slate-500">{profile.email}</p>
+            <h1 className="text-3xl font-black text-white">{profile.display_name || "Player"}</h1>
+            <p className="text-slate-400">{profile.email}</p>
           </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map(([label, value]) => (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4" key={label}>
-              <div className="text-sm font-semibold text-slate-500">{label}</div>
-              <div className="mt-2 text-2xl font-bold text-ink">{Number(value).toLocaleString()}</div>
+            <div className="panel-soft p-4" key={label}>
+              <div className="text-sm font-semibold text-slate-400">{label}</div>
+              <div className="mt-2 text-2xl font-black text-white">{Number(value).toLocaleString()}</div>
             </div>
           ))}
         </div>
@@ -47,4 +47,3 @@ export function Profile() {
     </main>
   );
 }
-

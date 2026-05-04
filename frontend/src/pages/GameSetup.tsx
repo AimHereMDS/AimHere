@@ -1,18 +1,22 @@
-import { Play } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { Bot, Compass, Loader2, MapPin, Navigation, Play, Sparkles, Timer, User, type LucideIcon } from "lucide-react";
+import type { FormEvent, ReactNode } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { ActiveGame, AiDifficulty, GameMode, GameSetup as Setup, LocationMode, MovementMode } from "../types/game";
 import { apiFetch } from "../utils/api";
 
-const locationModes: Array<{ value: LocationMode; label: string; helper: string }> = [
-  { value: "default", label: "World random", helper: "Runtime random coordinates with Street View coverage." },
-  { value: "custom", label: "Custom prompt", helper: "Describe anything playable: Romania, ski towns, desert highways." },
-  { value: "country", label: "Country", helper: "Type a country name." },
-  { value: "continent", label: "Continent", helper: "Type a continent or region." },
-  { value: "urban", label: "Urban", helper: "Large cities and dense streets." },
-  { value: "rural", label: "Rural", helper: "Roads outside dense cities." },
-  { value: "famous", label: "Famous locations", helper: "Landmarks and recognizable places." },
+type ChoiceOption<T extends string> = {
+  value: T;
+  label: string;
+  helper: string;
+  icon?: LucideIcon;
+};
+
+const locationModes: Array<ChoiceOption<LocationMode>> = [
+  { value: "default", label: "Random", helper: "Anywhere with Street View coverage.", icon: Compass },
+  { value: "custom", label: "Custom prompt", helper: "Describe the exact challenge style.", icon: Sparkles },
+  { value: "filter", label: "Filter", helper: "Country, region, urban/rural, landmarks.", icon: MapPin },
 ];
 
 export function GameSetup() {
@@ -20,27 +24,27 @@ export function GameSetup() {
   const [mode, setMode] = useState<GameMode>("single");
   const [locationMode, setLocationMode] = useState<LocationMode>("default");
   const [filter, setFilter] = useState("");
-  const [movementMode, setMovementMode] = useState<MovementMode>("rotation");
-  const [movementLimit, setMovementLimit] = useState(5);
-  const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(180);
+  const [movementMode, setMovementMode] = useState<MovementMode>("limited");
+  const [movementLimit, setMovementLimit] = useState(10);
+  const [timerEnabled, setTimerEnabled] = useState(true);
+  const [timerSeconds, setTimerSeconds] = useState(90);
   const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>("medium");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function start(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
     setError("");
+    if (locationMode !== "default" && !filter.trim()) {
+      setError("Add a location prompt or filter before starting.");
+      return;
+    }
+
+    setBusy(true);
     const setup: Setup = {
       mode,
       location_mode: locationMode,
-      filter_text:
-        locationMode === "default"
-          ? undefined
-          : locationMode === "custom"
-            ? filter
-            : `${locationMode}: ${filter || locationMode}`,
+      filter_text: locationMode === "default" ? undefined : filter.trim(),
       movement_mode: movementMode,
       movement_limit: movementLimit,
       timer_seconds: timerEnabled ? timerSeconds : null,
@@ -62,127 +66,181 @@ export function GameSetup() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-ink">Game setup</h1>
-        <p className="mt-2 text-slate-600">Choose the match type, location source, movement rules, and timer.</p>
+    <main className="app-shell mx-auto max-w-6xl px-4 py-8">
+      <div className="mb-8">
+        <div className="chip mb-3">
+          <Play size={14} />
+          New game
+        </div>
+        <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-5xl">Set the rules</h1>
+        <p className="mt-2 max-w-2xl text-slate-300">Five rounds, live Street View, optional hints, and an AI opponent when you want a race.</p>
       </div>
+
       <form className="grid gap-5 lg:grid-cols-[1fr_360px]" onSubmit={start}>
         <div className="space-y-5">
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 font-semibold text-ink">Match mode</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(["single", "pve"] as GameMode[]).map((item) => (
-                <button
-                  className={`rounded-md border p-4 text-left ${mode === item ? "border-field bg-teal-50" : "border-slate-200"}`}
-                  key={item}
-                  onClick={() => setMode(item)}
-                  type="button"
-                >
-                  <div className="font-semibold capitalize">{item === "pve" ? "PvE AI opponent" : "Single player"}</div>
-                  <div className="mt-1 text-sm text-slate-500">
-                    {item === "pve" ? "AI guesses after you place your pin." : "Five rounds against the map."}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
+          <Section title="Game mode">
+            <ChoiceGroup
+              columns="sm:grid-cols-2"
+              onChange={setMode}
+              options={[
+                { value: "single", label: "Solo", helper: "You against the map.", icon: User },
+                { value: "pve", label: "Vs AI", helper: "Opponent guesses after your pin.", icon: Bot },
+              ]}
+              value={mode}
+            />
+          </Section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 font-semibold text-ink">Location source</h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              {locationModes.map((item) => (
-                <button
-                  className={`rounded-md border p-4 text-left ${locationMode === item.value ? "border-field bg-teal-50" : "border-slate-200"}`}
-                  key={item.value}
-                  onClick={() => setLocationMode(item.value)}
-                  type="button"
-                >
-                  <div className="font-semibold">{item.label}</div>
-                  <div className="mt-1 text-sm text-slate-500">{item.helper}</div>
-                </button>
-              ))}
-            </div>
+          {mode === "pve" && (
+            <Section title="AI difficulty">
+              <ChoiceGroup
+                columns="sm:grid-cols-3"
+                onChange={setAiDifficulty}
+                options={[
+                  { value: "easy", label: "Easy", helper: "Wide mistakes." },
+                  { value: "medium", label: "Medium", helper: "Balanced guesses." },
+                  { value: "hard", label: "Hard", helper: "Tighter guesses." },
+                ]}
+                value={aiDifficulty}
+              />
+            </Section>
+          )}
+
+          <Section title="Locations">
+            <ChoiceGroup columns="sm:grid-cols-3" onChange={setLocationMode} options={locationModes} value={locationMode} />
             {locationMode !== "default" && (
-              <label className="mt-4 block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Filter text</span>
-                <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-field"
-                  onChange={(event) => setFilter(event.target.value)}
-                  placeholder="Romania, famous landmarks, big cities in Asia"
-                  value={filter}
-                />
-              </label>
+              <div className="mt-4 panel-soft p-4">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-semibold text-slate-300">
+                    {locationMode === "custom" ? "Describe the locations" : "Filter"}
+                  </span>
+                  <input
+                    className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-teal-300"
+                    maxLength={220}
+                    onChange={(event) => setFilter(event.target.value)}
+                    placeholder={locationMode === "custom" ? "Romania, ski towns, big cities in Asia" : "Japan, rural Europe, famous landmarks"}
+                    value={filter}
+                  />
+                </label>
+                <p className="mt-2 text-xs text-slate-400">Curator Agent will choose diverse playable coordinates and the backend snaps them toward Street View coverage.</p>
+              </div>
             )}
-          </section>
+          </Section>
         </div>
 
         <aside className="space-y-5">
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 font-semibold text-ink">Movement</h2>
-            <div className="space-y-2">
-              {(["rotation", "limited", "full"] as MovementMode[]).map((item) => (
-                <label className="flex items-center gap-3 rounded-md border border-slate-200 px-3 py-2" key={item}>
-                  <input checked={movementMode === item} onChange={() => setMovementMode(item)} type="radio" />
-                  <span className="capitalize">{item === "full" ? "Full movement" : item.replace("-", " ")}</span>
-                </label>
-              ))}
-            </div>
+          <Section title="Movement">
+            <ChoiceGroup
+              columns="grid-cols-1"
+              onChange={setMovementMode}
+              options={[
+                { value: "rotation", label: "Rotation only", helper: "Look around without moving.", icon: Navigation },
+                { value: "limited", label: "Limited", helper: `Up to ${movementLimit} panoramas.`, icon: MapPin },
+                { value: "full", label: "Full movement", helper: "Roam freely.", icon: Compass },
+              ]}
+              value={movementMode}
+            />
             {movementMode === "limited" && (
-              <label className="mt-3 block">
-                <span className="mb-1 block text-sm text-slate-600">Max panoramas away</span>
+              <label className="mt-4 block panel-soft p-4">
+                <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-300">
+                  Max panoramas
+                  <span className="font-black text-teal-300">{movementLimit}</span>
+                </span>
                 <input
-                  className="w-full"
-                  max={25}
-                  min={1}
+                  className="w-full accent-teal-400"
+                  max={30}
+                  min={3}
                   onChange={(event) => setMovementLimit(Number(event.target.value))}
                   type="range"
                   value={movementLimit}
                 />
-                <span className="text-sm font-semibold">{movementLimit}</span>
               </label>
             )}
-          </section>
+          </Section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 font-semibold text-ink">Timer and AI</h2>
-            <label className="flex items-center justify-between gap-3">
-              <span>Countdown timer</span>
-              <input checked={timerEnabled} onChange={(event) => setTimerEnabled(event.target.checked)} type="checkbox" />
-            </label>
-            {timerEnabled && (
-              <input
-                className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2"
-                max={900}
-                min={15}
-                onChange={(event) => setTimerSeconds(Number(event.target.value))}
-                type="number"
-                value={timerSeconds}
-              />
-            )}
-            {mode === "pve" && (
-              <label className="mt-4 block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">AI difficulty</span>
-                <select
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  onChange={(event) => setAiDifficulty(event.target.value as AiDifficulty)}
-                  value={aiDifficulty}
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
+          <Section title="Timer">
+            <div className="panel-soft p-4">
+              <label className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-semibold text-white">
+                  <Timer size={18} />
+                  Round timer
+                </span>
+                <input checked={timerEnabled} className="h-5 w-5 accent-teal-400" onChange={(event) => setTimerEnabled(event.target.checked)} type="checkbox" />
               </label>
-            )}
-          </section>
-          <button className="flex w-full items-center justify-center gap-2 rounded-md bg-field px-5 py-3 font-semibold text-white disabled:opacity-60" disabled={busy}>
-            <Play size={18} />
-            {busy ? "Preparing panoramas..." : "Start 5 rounds"}
+              {timerEnabled && (
+                <label className="mt-4 block">
+                  <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-300">
+                    Seconds per round
+                    <span className="font-black text-teal-300">{timerSeconds}s</span>
+                  </span>
+                  <input
+                    className="w-full accent-teal-400"
+                    max={300}
+                    min={30}
+                    onChange={(event) => setTimerSeconds(Number(event.target.value))}
+                    step={15}
+                    type="range"
+                    value={timerSeconds}
+                  />
+                </label>
+              )}
+            </div>
+          </Section>
+
+          <button className="btn-gg w-full disabled:translate-y-0 disabled:opacity-60" disabled={busy}>
+            {busy ? <Loader2 className="animate-spin" size={19} /> : <Play size={19} strokeWidth={3} />}
+            {busy ? "Loading panoramas..." : "Start 5 rounds"}
           </button>
-          {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-md border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
         </aside>
       </form>
     </main>
   );
 }
 
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="panel p-5">
+      <h2 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-teal-300">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function ChoiceGroup<T extends string>({
+  value,
+  onChange,
+  options,
+  columns,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<ChoiceOption<T>>;
+  columns: string;
+}) {
+  return (
+    <div className={`grid gap-3 ${columns}`}>
+      {options.map((option) => {
+        const active = option.value === value;
+        const Icon = option.icon;
+        return (
+          <button
+            className={`rounded-lg border p-4 text-left transition ${
+              active
+                ? "border-teal-300 bg-teal-300/[0.12] shadow-[0_0_0_3px_rgba(45,212,191,0.12)]"
+                : "border-white/10 bg-slate-950/35 hover:border-teal-300/45"
+            }`}
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            type="button"
+          >
+            <div className="mb-1 flex items-center gap-2">
+              {Icon && <Icon className={active ? "text-teal-300" : "text-slate-400"} size={17} />}
+              <div className="text-sm font-black uppercase tracking-tight text-white">{option.label}</div>
+            </div>
+            <div className="text-xs leading-5 text-slate-400">{option.helper}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

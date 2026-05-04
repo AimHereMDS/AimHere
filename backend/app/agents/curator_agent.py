@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 from typing import Any
 
-import httpx
 from anthropic import Anthropic
 
 from app.database import get_settings
 from app.schemas import Coordinate
+from app.agents.street_view import nearest_street_view_coordinate
+
+logger = logging.getLogger(__name__)
 
 REGION_BOUNDS: dict[str, tuple[float, float, float, float]] = {
     "romania": (43.6, 48.4, 20.2, 29.8),
@@ -67,19 +70,7 @@ def _extract_json(text: str) -> list[dict[str, Any]]:
 
 
 async def has_street_view_coverage(lat: float, lng: float) -> bool:
-    settings = get_settings()
-    if not settings.google_maps_api_key:
-        return True
-    params = {
-        "location": f"{lat},{lng}",
-        "radius": 500,
-        "source": "outdoor",
-        "key": settings.google_maps_api_key,
-    }
-    async with httpx.AsyncClient(timeout=8) as client:
-        response = await client.get("https://maps.googleapis.com/maps/api/streetview/metadata", params=params)
-        response.raise_for_status()
-        return response.json().get("status") == "OK"
+    return await nearest_street_view_coordinate(lat, lng, radius=500) is not None
 
 
 async def curate_locations(description: str, count: int = 5) -> list[Coordinate]:
@@ -90,13 +81,15 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
     try:
         client = Anthropic(api_key=settings.anthropic_api_key)
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=settings.anthropic_model,
             max_tokens=900,
             temperature=0.2,
             system=(
                 "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
                 "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
-                "locations likely to have Google Street View coverage. Do not include prose."
+                "locations likely to have Google Street View coverage. Prefer well-known streets, "
+                "public squares, landmarks, and populated areas. Avoid oceans, remote wilderness, "
+                "private property, and clusters of near-identical coordinates. Do not include prose."
             ),
             messages=[
                 {
@@ -107,12 +100,14 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
         )
         raw = message.content[0].text if message.content else "[]"
         parsed = [Coordinate(**item) for item in _extract_json(raw)]
-    except Exception:
+    except Exception as exc:
+        logger.warning("Curator Agent fell back to static coordinates: %s", exc)
         return _fallback_for_query(description, count)
     verified: list[Coordinate] = []
     for point in parsed:
-        if await has_street_view_coverage(point.lat, point.lng):
-            verified.append(point)
+        snapped = await nearest_street_view_coordinate(point.lat, point.lng, radius=30000, label=point.label)
+        if snapped:
+            verified.append(snapped)
         if len(verified) == count:
             break
     if len(verified) < count:
