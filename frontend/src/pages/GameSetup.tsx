@@ -1,4 +1,4 @@
-import { Bot, Compass, Loader2, MapPin, Navigation, Play, Sparkles, Timer, User, type LucideIcon } from "lucide-react";
+import { Bot, Compass, Loader2, MapPin, Navigation, Play, PlayCircle, Sparkles, Timer, User, type LucideIcon } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,11 @@ type ChoiceOption<T extends string> = {
   helper: string;
   icon?: LucideIcon;
 };
+
+function activeGame(): ActiveGame | null {
+  const raw = localStorage.getItem("aim-here-active-game");
+  return raw ? (JSON.parse(raw) as ActiveGame) : null;
+}
 
 const locationModes: Array<ChoiceOption<LocationMode>> = [
   { value: "default", label: "Random", helper: "Anywhere with Street View coverage.", icon: Compass },
@@ -136,6 +141,7 @@ export function GameSetup() {
   const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>("medium");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const savedGame = activeGame();
 
   function handleLocationModeChange(newMode: LocationMode) {
     if (newMode === locationMode) return;
@@ -186,6 +192,16 @@ export function GameSetup() {
         </div>
         <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-5xl">Set the rules</h1>
         <p className="mt-2 max-w-2xl text-slate-300">Five rounds, live Street View, optional hints, and an AI opponent when you want a race.</p>
+        {savedGame && savedGame.rounds.length < 5 && (
+          <button
+            className="mt-5 inline-flex items-center gap-2 rounded-md border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:border-amber-200/70 hover:bg-amber-300/15"
+            onClick={() => navigate(`/game/${savedGame.id}`)}
+            type="button"
+          >
+            <PlayCircle size={17} />
+            Resume saved match ({savedGame.rounds.length}/5)
+          </button>
+        )}
       </div>
 
       <form className="grid gap-5 lg:grid-cols-[1fr_360px]" onSubmit={start}>

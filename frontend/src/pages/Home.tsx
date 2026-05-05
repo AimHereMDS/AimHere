@@ -1,11 +1,18 @@
-import { Bot, Brain, Compass, Globe2, MapPinned, Sparkles, Target, Trophy } from "lucide-react";
+import { Bot, Brain, Compass, Globe2, MapPinned, PlayCircle, Sparkles, Target, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AuthCard } from "../components/Auth/AuthCard";
 import { useAuth } from "../hooks/useAuth";
+import type { ActiveGame } from "../types/game";
+
+function activeGame(): ActiveGame | null {
+  const raw = localStorage.getItem("aim-here-active-game");
+  return raw ? (JSON.parse(raw) as ActiveGame) : null;
+}
 
 export function Home() {
   const { user } = useAuth();
+  const savedGame = user ? activeGame() : null;
   return (
     <main className="app-shell">
       <section className="relative overflow-hidden border-b border-white/10">
@@ -61,6 +68,18 @@ export function Home() {
                     Profile
                   </Link>
                 </div>
+                {savedGame && savedGame.rounds.length < 5 && (
+                  <Link
+                    className="mt-4 flex items-center justify-between rounded-md border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:border-amber-200/70 hover:bg-amber-300/15"
+                    to={`/game/${savedGame.id}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <PlayCircle size={17} />
+                      Resume saved match
+                    </span>
+                    <span>{savedGame.rounds.length}/5</span>
+                  </Link>
+                )}
               </div>
             ) : (
               <AuthCard />

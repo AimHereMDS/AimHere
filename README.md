@@ -13,8 +13,11 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 - Interactive `StreetViewPanorama`, not static images.
 - Rotation-only, limited-movement, and full-movement modes.
 - Five-round single-player gameplay.
+- Saved unfinished matches can be resumed from the home or setup screen.
 - PvE mode with easy, medium, and hard AI opponent guesses from the current Street View frame.
+- PvE results include rounds won and average distance difference versus the AI.
 - Progressive visual Hint Agent with score penalties.
+- Round and final results include the hint log and AI reasoning shown to the player.
 - End-game summary map with real locations, guesses, and connecting lines.
 
 ## Tech Stack
@@ -75,6 +78,7 @@ There is no stored location catalog.
 - [Single Player Gameplay](#features)
 - [PvE Opponent](#features)
 - [AI Agents](./AGENTS.md)
+- [AI Development Report](./docs/ai-development-report.md)
 - [CI and Deployment](./.github/workflows/ci.yml)
 
 ## Tests

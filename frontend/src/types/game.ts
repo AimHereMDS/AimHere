@@ -51,6 +51,7 @@ export type PlayedRound = {
   result: RoundResult;
   hintsUsed: number;
   hints?: Hint[];
+  hintLog?: Hint[];
 };
 
 export type ActiveGame = {

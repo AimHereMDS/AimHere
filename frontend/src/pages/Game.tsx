@@ -1,4 +1,4 @@
-import { Bot, Clock, Flag, Lightbulb, MapPin, Trophy } from "lucide-react";
+import { Bot, Clock, DoorOpen, Flag, Lightbulb, MapPin, Trophy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -102,7 +102,7 @@ export function Game() {
     if (!game || !guess || !current || !result) return;
     const updated: ActiveGame = {
       ...game,
-      rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hints: roundHints }],
+      rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog: roundHints }],
     };
     localStorage.setItem("aim-here-active-game", JSON.stringify(updated));
     if (roundIndex >= 5) {
@@ -125,6 +125,19 @@ export function Game() {
 
   const aiGuess = useMemo(() => (result?.ai_guess ? { lat: result.ai_guess.lat, lng: result.ai_guess.lng } : null), [result]);
 
+  function saveAndExit() {
+    if (!game) return;
+    const savedGame =
+      result && guess && current
+        ? {
+            ...game,
+            rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog: roundHints }],
+          }
+        : game;
+    localStorage.setItem("aim-here-active-game", JSON.stringify(savedGame));
+    navigate("/");
+  }
+
   if (!game || !current) return null;
 
   return (
@@ -145,6 +158,14 @@ export function Game() {
           <p className="mt-1 text-sm text-white/75">
             {game.mode === "pve" ? "PvE match" : "Solo match"} / {game.setup.movement_mode} movement
           </p>
+          <button
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-xs font-black text-slate-200 transition hover:border-teal-300/50 hover:text-teal-200"
+            onClick={saveAndExit}
+            type="button"
+          >
+            <DoorOpen size={14} />
+            Save & exit
+          </button>
         </div>
         <div className="pointer-events-auto flex items-center gap-2">
           {secondsLeft !== null && (
@@ -168,7 +189,7 @@ export function Game() {
 
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
         <ScoreBoard rounds={game.rounds} />
-        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsUpdate={setRoundHints} view={panoramaView} />
+        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
       </div>
 
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -179,15 +200,15 @@ export function Game() {
             <p className="text-sm text-white/70">{formatKm(result.distance_km)} away</p>
             {roundHints.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
-                <div className="flex items-center gap-2 text-sm font-black text-amber-300">
+                <div className="mb-2 flex items-center gap-2 text-sm font-black text-amber-200">
                   <Lightbulb size={16} />
-                  Hints used ({roundHints.length})
+                  Hint log
                 </div>
-                <div className="mt-2 space-y-2">
-                  {roundHints.map((h) => (
-                    <div key={h.level} className="text-xs leading-5 text-white/65">
-                      <span className="font-bold text-slate-300">{h.title}:</span> {h.hint}
-                    </div>
+                <div className="space-y-1.5">
+                  {roundHints.map((hint) => (
+                    <p className="text-xs leading-5 text-white/65" key={hint.level}>
+                      <span className="font-black text-white/80">{hint.title}:</span> {hint.hint}
+                    </p>
                   ))}
                 </div>
               </div>

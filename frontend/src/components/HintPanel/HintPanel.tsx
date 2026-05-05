@@ -8,20 +8,20 @@ type Props = {
   location: Coordinate;
   view?: PanoramaView | null;
   disabled: boolean;
-  onHintsUpdate: (hints: Hint[]) => void;
+  onHintsChange: (hints: Hint[]) => void;
 };
 
-export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
+export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const isMounted = useRef(true);
   const busyRef = useRef(false);
-  const onHintsUpdateRef = useRef(onHintsUpdate);
+  const onHintsChangeRef = useRef(onHintsChange);
 
   useEffect(() => {
-    onHintsUpdateRef.current = onHintsUpdate;
-  }, [onHintsUpdate]);
+    onHintsChangeRef.current = onHintsChange;
+  }, [onHintsChange]);
 
   useEffect(() => {
     return () => {
@@ -30,7 +30,7 @@ export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
   }, []);
 
   useEffect(() => {
-    onHintsUpdateRef.current(hints);
+    onHintsChangeRef.current(hints);
   }, [hints]);
 
   async function getHint() {
