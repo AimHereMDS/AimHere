@@ -67,6 +67,7 @@ async def submit_round(
             request.real.lat,
             request.real.lng,
             request.ai_difficulty or game.ai_difficulty or "medium",
+            request.view,
         )
         ai_distance = haversine_km(request.real.lat, request.real.lng, float(ai_payload["lat"]), float(ai_payload["lng"]))
         ai_score = score_from_distance(ai_distance, 0)
@@ -146,4 +147,3 @@ async def finish_game(
         "rounds_won": game.rounds_won,
         "ai_rounds_won": game.ai_rounds_won,
     }
-

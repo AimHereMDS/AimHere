@@ -9,6 +9,15 @@ class Coordinate(BaseModel):
     label: str | None = None
 
 
+class PanoramaView(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    pano_id: str | None = Field(default=None, max_length=256)
+    heading: float | None = None
+    pitch: float | None = Field(default=None, ge=-90, le=90)
+    fov: float | None = Field(default=None, ge=10, le=120)
+
+
 class LocationRequest(BaseModel):
     mode: str = "default"
     filter_text: str | None = None
@@ -41,6 +50,7 @@ class RoundSubmit(BaseModel):
     guess: Coordinate
     hint_count: int = Field(default=0, ge=0, le=3)
     ai_difficulty: str | None = "medium"
+    view: PanoramaView | None = None
 
 
 class OpponentGuess(BaseModel):
@@ -65,6 +75,7 @@ class HintRequest(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
     used_levels: int = Field(default=0, ge=0, le=2)
+    view: PanoramaView | None = None
 
 
 class HintResponse(BaseModel):
@@ -98,4 +109,3 @@ class LeaderboardEntry(BaseModel):
     games_played: int
     average_score: float
     updated_at: datetime | None = None
-

@@ -41,4 +41,4 @@ async def create_locations(
 
 @router.post("/hint", response_model=HintResponse)
 async def hint(request: HintRequest, _: dict = Depends(get_current_user_payload)) -> dict:
-    return await progressive_hint(request.lat, request.lng, request.used_levels)
+    return await progressive_hint(request.lat, request.lng, request.used_levels, request.view)

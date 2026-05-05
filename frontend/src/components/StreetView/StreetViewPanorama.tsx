@@ -1,26 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
-import type { Coordinate, MovementMode } from "../../types/game";
+import type { Coordinate, MovementMode, PanoramaView } from "../../types/game";
 
 type Props = {
   location: Coordinate;
   movementMode: MovementMode;
   movementLimit: number;
   className?: string;
+  onViewChange?: (view: PanoramaView) => void;
 };
 
-export function StreetViewPanorama({ location, movementMode, movementLimit, className }: Props) {
+const POV_VIEW_EMIT_INTERVAL_MS = 100;
+
+export function StreetViewPanorama({ location, movementMode, movementLimit, className, onViewChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const previousPanoRef = useRef<string | null>(null);
   const depthRef = useRef<Map<string, number>>(new Map());
+  const onViewChangeRef = useRef<Props["onViewChange"]>(onViewChange);
   const [blocked, setBlocked] = useState(false);
   const [depth, setDepth] = useState(0);
 
   useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
+
+  useEffect(() => {
     let cancelled = false;
-    let listener: google.maps.MapsEventListener | null = null;
+    let listeners: google.maps.MapsEventListener[] = [];
+    let initialEmitTimeout: number | null = null;
+    let povEmitTimeout: number | null = null;
+    let lastViewEmitAt: number | null = null;
+
+    const clearInitialEmitTimeout = () => {
+      if (initialEmitTimeout === null) return;
+      window.clearTimeout(initialEmitTimeout);
+      initialEmitTimeout = null;
+    };
+
+    const clearPovEmitTimeout = () => {
+      if (povEmitTimeout === null) return;
+      window.clearTimeout(povEmitTimeout);
+      povEmitTimeout = null;
+    };
 
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return;
@@ -42,29 +65,78 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
         showRoadLabels: false,
       });
       panoramaRef.current = panorama;
-      listener = panorama.addListener("pano_changed", () => {
-        const current = panorama.getPano();
-        if (!current) return;
-        if (!depthRef.current.has(current)) {
-          const previous = previousPanoRef.current;
-          const previousDepth = previous ? depthRef.current.get(previous) ?? 0 : 0;
-          depthRef.current.set(current, previous ? previousDepth + 1 : 0);
+      const emitView = () => {
+        const position = panorama.getPosition();
+        const pov = panorama.getPov();
+        const zoom = panorama.getZoom();
+        const fov = typeof zoom === "number" && Number.isFinite(zoom) ? Math.max(10, Math.min(120, 180 / 2 ** zoom)) : 90;
+        if (!position || !pov) return false;
+        onViewChangeRef.current?.({
+          lat: position.lat(),
+          lng: position.lng(),
+          pano_id: panorama.getPano() || null,
+          heading: pov.heading,
+          pitch: pov.pitch,
+          fov,
+        });
+        return true;
+      };
+      const emitViewImmediately = () => {
+        clearPovEmitTimeout();
+        if (emitView()) {
+          lastViewEmitAt = window.performance.now();
         }
-        const nextDepth = depthRef.current.get(current) ?? 0;
-        if (movementMode === "limited" && nextDepth > movementLimit && previousPanoRef.current) {
-          setBlocked(true);
-          panorama.setPano(previousPanoRef.current);
+      };
+      const emitThrottledPovView = () => {
+        const now = window.performance.now();
+        const elapsed = lastViewEmitAt === null ? POV_VIEW_EMIT_INTERVAL_MS : now - lastViewEmitAt;
+        if (elapsed >= POV_VIEW_EMIT_INTERVAL_MS) {
+          clearPovEmitTimeout();
+          if (emitView()) {
+            lastViewEmitAt = now;
+          }
           return;
         }
-        setBlocked(false);
-        setDepth(nextDepth);
-        previousPanoRef.current = current;
-      });
+        if (povEmitTimeout !== null) return;
+        povEmitTimeout = window.setTimeout(() => {
+          povEmitTimeout = null;
+          if (cancelled) return;
+          if (emitView()) {
+            lastViewEmitAt = window.performance.now();
+          }
+        }, POV_VIEW_EMIT_INTERVAL_MS - elapsed);
+      };
+      listeners = [
+        panorama.addListener("pano_changed", () => {
+          const current = panorama.getPano();
+          if (!current) return;
+          if (!depthRef.current.has(current)) {
+            const previous = previousPanoRef.current;
+            const previousDepth = previous ? depthRef.current.get(previous) ?? 0 : 0;
+            depthRef.current.set(current, previous ? previousDepth + 1 : 0);
+          }
+          const nextDepth = depthRef.current.get(current) ?? 0;
+          if (movementMode === "limited" && nextDepth > movementLimit && previousPanoRef.current) {
+            setBlocked(true);
+            panorama.setPano(previousPanoRef.current);
+            return;
+          }
+          setBlocked(false);
+          setDepth(nextDepth);
+          previousPanoRef.current = current;
+          emitViewImmediately();
+        }),
+        panorama.addListener("position_changed", emitViewImmediately),
+        panorama.addListener("pov_changed", emitThrottledPovView),
+      ];
+      initialEmitTimeout = window.setTimeout(emitViewImmediately, 0);
     });
 
     return () => {
       cancelled = true;
-      listener?.remove();
+      clearInitialEmitTimeout();
+      clearPovEmitTimeout();
+      listeners.forEach((listener) => listener.remove());
       panoramaRef.current = null;
     };
   }, [location.lat, location.lng, movementMode, movementLimit]);

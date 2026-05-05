@@ -2,15 +2,16 @@ import { Lightbulb } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { requestHint } from "../../agents/hintAgent";
-import type { Coordinate, Hint } from "../../types/game";
+import type { Coordinate, Hint, PanoramaView } from "../../types/game";
 
 type Props = {
   location: Coordinate;
+  view?: PanoramaView | null;
   disabled: boolean;
   onHintUsed: (count: number) => void;
 };
 
-export function HintPanel({ location, disabled, onHintUsed }: Props) {
+export function HintPanel({ location, view, disabled, onHintUsed }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +24,7 @@ export function HintPanel({ location, disabled, onHintUsed }: Props) {
   async function getHint() {
     if (hints.length >= 3) return;
     setBusy(true);
-    const hint = await requestHint(location, hints.length);
+    const hint = await requestHint(location, hints.length, view);
     const next = [...hints, hint];
     setHints(next);
     onHintUsed(next.length);
