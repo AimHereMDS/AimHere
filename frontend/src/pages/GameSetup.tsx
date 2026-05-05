@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import type { ActiveGame, AiDifficulty, GameMode, GameSetup as Setup, LocationMode, MovementMode } from "../types/game";
 import { apiFetch } from "../utils/api";
 
+// ── Choice group types ───────────────────────────────────────────────────────
+
 type ChoiceOption<T extends string> = {
   value: T;
   label: string;
@@ -19,6 +21,108 @@ const locationModes: Array<ChoiceOption<LocationMode>> = [
   { value: "filter", label: "Filter", helper: "Country, region, urban/rural, landmarks.", icon: MapPin },
 ];
 
+// ── Predefined filter categories ────────────────────────────────────────────
+
+type FilterChip = { label: string; emoji: string };
+type FilterCategory = { name: string; chips: FilterChip[] };
+
+const FILTER_CATEGORIES: FilterCategory[] = [
+  {
+    name: "Continent",
+    chips: [
+      { label: "Africa", emoji: "🌍" },
+      { label: "Asia", emoji: "🌏" },
+      { label: "Europe", emoji: "🏰" },
+      { label: "North America", emoji: "🗽" },
+      { label: "South America", emoji: "🌿" },
+      { label: "Oceania", emoji: "🦘" },
+    ],
+  },
+  {
+    name: "Country",
+    chips: [
+      { label: "Romania", emoji: "🇷🇴" },
+      { label: "Japan", emoji: "🇯🇵" },
+      { label: "USA", emoji: "🇺🇸" },
+      { label: "France", emoji: "🇫🇷" },
+      { label: "Brazil", emoji: "🇧🇷" },
+      { label: "Australia", emoji: "🇦🇺" },
+      { label: "India", emoji: "🇮🇳" },
+      { label: "Germany", emoji: "🇩🇪" },
+    ],
+  },
+  {
+    name: "Environment",
+    chips: [
+      { label: "Urban", emoji: "🏙️" },
+      { label: "Rural", emoji: "🌾" },
+      { label: "Coastal", emoji: "🏖️" },
+      { label: "Mountain", emoji: "⛰️" },
+    ],
+  },
+  {
+    name: "Theme",
+    chips: [
+      { label: "Famous Landmarks", emoji: "🗼" },
+      { label: "Historic Sites", emoji: "🏛️" },
+      { label: "Natural Wonders", emoji: "🌋" },
+    ],
+  },
+];
+
+// ── FilterPicker component ───────────────────────────────────────────────────
+
+function FilterPicker({ value, onChange }: { value: string; onChange: (label: string) => void }) {
+  return (
+    <div className="mt-3 space-y-4">
+      {FILTER_CATEGORIES.map((category) => (
+        <div key={category.name}>
+          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+            {category.name}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {category.chips.map((chip) => {
+              const active = value === chip.label;
+              return (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => onChange(active ? "" : chip.label)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all duration-150 ${
+                    active
+                      ? "border-teal-300 bg-teal-300/[0.18] text-teal-200 shadow-[0_0_0_2px_rgba(45,212,191,0.18)]"
+                      : "border-white/10 bg-slate-950/40 text-slate-300 hover:border-teal-300/50 hover:bg-teal-300/[0.07] hover:text-teal-100"
+                  }`}
+                >
+                  <span className="text-base leading-none">{chip.emoji}</span>
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Selection status */}
+      <div className="mt-1">
+        {value ? (
+          <div className="flex items-center gap-2 rounded-md border border-teal-300/25 bg-teal-300/[0.07] px-3 py-2 text-sm">
+            <span className="text-teal-300">✓</span>
+            <span className="text-slate-300">
+              Curator Agent will search for{" "}
+              <span className="font-bold text-teal-200">{value}</span> locations.
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">Select a filter chip above to continue.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── GameSetup page ───────────────────────────────────────────────────────────
+
 export function GameSetup() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<GameMode>("single");
@@ -31,6 +135,12 @@ export function GameSetup() {
   const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>("medium");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  function handleLocationModeChange(newMode: LocationMode) {
+    setLocationMode(newMode);
+    // Clear filter when switching modes to avoid stale values crossing contexts
+    setFilter("");
+  }
 
   async function start(event: FormEvent) {
     event.preventDefault();
@@ -106,22 +216,30 @@ export function GameSetup() {
           )}
 
           <Section title="Locations">
-            <ChoiceGroup columns="sm:grid-cols-3" onChange={setLocationMode} options={locationModes} value={locationMode} />
-            {locationMode !== "default" && (
+            <ChoiceGroup columns="sm:grid-cols-3" onChange={handleLocationModeChange} options={locationModes} value={locationMode} />
+
+            {/* Custom mode – free text input */}
+            {locationMode === "custom" && (
               <div className="mt-4 panel-soft p-4">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-semibold text-slate-300">
-                    {locationMode === "custom" ? "Describe the locations" : "Filter"}
-                  </span>
+                  <span className="mb-1 block text-sm font-semibold text-slate-300">Describe the locations</span>
                   <input
                     className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-teal-300"
                     maxLength={220}
                     onChange={(event) => setFilter(event.target.value)}
-                    placeholder={locationMode === "custom" ? "Romania, ski towns, big cities in Asia" : "Japan, rural Europe, famous landmarks"}
+                    placeholder="Romania, ski towns, big cities in Asia"
                     value={filter}
                   />
                 </label>
                 <p className="mt-2 text-xs text-slate-400">Curator Agent will choose diverse playable coordinates and the backend snaps them toward Street View coverage.</p>
+              </div>
+            )}
+
+            {/* Filter mode – chip picker (no free-text input) */}
+            {locationMode === "filter" && (
+              <div className="mt-4 panel-soft p-4">
+                <p className="text-sm font-semibold text-slate-300">Choose a filter</p>
+                <FilterPicker value={filter} onChange={setFilter} />
               </div>
             )}
           </Section>
@@ -196,6 +314,8 @@ export function GameSetup() {
     </main>
   );
 }
+
+// ── Shared sub-components ────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
