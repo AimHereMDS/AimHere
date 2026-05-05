@@ -16,11 +16,12 @@ Each eval scenario defines:
 These tests run fully offline (no Anthropic or Google API keys needed).
 """
 
+import re
 from types import SimpleNamespace
 
 import pytest
 
-from app.agents.hint_agent import progressive_hint, _parse_hints, HINT_MULTIPLIERS, HINT_TITLES
+from app.agents.hint_agent import progressive_hint, _parse_hints, HINT_MULTIPLIERS
 from app.database import get_settings
 from app.schemas import PanoramaView
 
@@ -197,7 +198,9 @@ async def test_hint_clues_contain_required_location_keywords(monkeypatch, scenar
     ids=[s["id"] for s in EVAL_SCENARIOS],
 )
 async def test_hint_clues_do_not_leak_coordinates(monkeypatch, scenario):
-    """Hints must never expose the real coordinates — that would be cheating."""
+    """Hints must never expose the real coordinates — that would be cheating.
+    Checks multiple precision formats (e.g. 48.8584, 48.858, 48.86) to catch
+    rounded or reformatted leaks."""
     _patch_hint_agent(monkeypatch, scenario["claude_response"])
 
     view = PanoramaView(lat=0.0, lng=0.0, pano_id=f"pano-{scenario['id']}")
@@ -207,11 +210,36 @@ async def test_hint_clues_do_not_leak_coordinates(monkeypatch, scenario):
         hints.append(result["hint"])
 
     combined = " ".join(hints)
+    # Check the exact forbidden strings
     for forbidden in scenario["forbidden_keywords"]:
         assert forbidden not in combined, (
             f"[{scenario['label']}] Forbidden value '{forbidden}' leaked into hints. "
             f"Hints: {hints}"
         )
+    # Also check common alternate precisions (rounded to 2, 3, 4 decimals)
+    for coord in (scenario["lat"], scenario["lng"]):
+        for precision in (2, 3, 4):
+            rounded = f"{coord:.{precision}f}"
+            assert rounded not in combined, (
+                f"[{scenario['label']}] Coordinate {rounded} (precision={precision}) "
+                f"leaked into hints. Hints: {hints}"
+            )
+    # Regex: catch any number matching the integer part + decimal prefix
+    for coord in (scenario["lat"], scenario["lng"]):
+        int_part = str(int(abs(coord)))
+        sign = "-" if coord < 0 else ""
+        pattern = re.escape(sign) + re.escape(int_part) + r"\.\d{2,}"
+        if re.search(pattern, combined):
+            match = re.search(pattern, combined).group()
+            # Only flag if the matched number is close to the real coordinate
+            try:
+                if abs(float(match) - coord) < 1.0:
+                    pytest.fail(
+                        f"[{scenario['label']}] Coordinate-like value '{match}' found "
+                        f"in hints (real={coord}). Hints: {hints}"
+                    )
+            except ValueError:
+                pass
 
 
 # ── Eval: progressive quality — later hints are longer / more specific ────────
@@ -244,12 +272,19 @@ async def test_hint_progression_gets_more_specific(monkeypatch, scenario):
         result = await progressive_hint(scenario["lat"], scenario["lng"], level, view)
         hint_texts.append(result["hint"])
 
+    hint1_lower = hint_texts[0].lower()
     hint3_lower = hint_texts[2].lower()
     expected_toponyms = HINT3_TOPONYMS[scenario["id"]]
-    found = [t for t in expected_toponyms if t in hint3_lower]
-    assert found, (
+    found_in_hint3 = [t for t in expected_toponyms if t in hint3_lower]
+    assert found_in_hint3, (
         f"[{scenario['label']}] Hint 3 should contain at least one specific toponym "
         f"from {expected_toponyms}. Got: {hint_texts[2]!r}"
+    )
+    # Hint 3 must introduce at least one toponym NOT already present in hint 1
+    new_in_hint3 = [t for t in found_in_hint3 if t not in hint1_lower]
+    assert new_in_hint3, (
+        f"[{scenario['label']}] Hint 3 should introduce a toponym not in hint 1, but "
+        f"all found toponyms {found_in_hint3} already appear in hint 1: {hint_texts[0]!r}"
     )
 
 
@@ -296,8 +331,17 @@ async def test_prompt_does_not_contain_real_coordinates(monkeypatch, scenario):
     await progressive_hint(scenario["lat"], scenario["lng"], 0, view)
 
     request = captured["anthropic_request"]
-    content = request["messages"][0]["content"]
-    combined_prompt = f"{request['system']} {content[0]['text']}"
+    # Collect ALL text from system prompt + every text block in every message
+    text_parts = [str(request.get("system", ""))]
+    for msg in request.get("messages", []):
+        msg_content = msg.get("content", [])
+        if isinstance(msg_content, str):
+            text_parts.append(msg_content)
+        elif isinstance(msg_content, list):
+            for block in msg_content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text_parts.append(block["text"])
+    combined_prompt = " ".join(text_parts)
 
     for hidden_value in (str(scenario["lat"]), str(scenario["lng"]), f"pano-{scenario['id']}"):
         assert hidden_value not in combined_prompt, (
