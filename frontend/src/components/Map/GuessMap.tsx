@@ -19,11 +19,11 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const linesRef = useRef<google.maps.Polyline[]>([]);
-  const lockedRef = useRef(locked);
+  const lockedRef = useRef(false);
   const onGuessRef = useRef(onGuess);
 
   useEffect(() => {
-    lockedRef.current = locked;
+    lockedRef.current = Boolean(locked);
     onGuessRef.current = onGuess;
   }, [locked, onGuess]);
 
@@ -138,12 +138,9 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
         </div>
       )}
       {guess && real && (
-        <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-white/10 bg-slate-950/88 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
+        <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-white/10 bg-slate-950/90 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
           <div className="font-black uppercase tracking-[0.14em] text-teal-300">Round result</div>
-          <div className="mt-1 text-slate-200">
-            Your guess and real location are shown.
-            {typeof distanceKm === "number" && <span className="font-black text-white"> Distance: {formatKm(distanceKm)}.</span>}
-          </div>
+          {typeof distanceKm === "number" && <div className="mt-1 font-black text-white">Distance: {formatKm(distanceKm)}</div>}
         </div>
       )}
     </div>
