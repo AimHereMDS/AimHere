@@ -16,35 +16,37 @@ export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const isMounted = useRef(true);
+  const busyRef = useRef(false);
+  const onHintsUpdateRef = useRef(onHintsUpdate);
 
   useEffect(() => {
-    isMounted.current = true;
+    onHintsUpdateRef.current = onHintsUpdate;
+  }, [onHintsUpdate]);
+
+  useEffect(() => {
     return () => {
       isMounted.current = false;
     };
   }, []);
 
   useEffect(() => {
-    setHints([]);
-    setBusy(false);
-    setError("");
-    onHintsUpdate([]);
-  }, [location.lat, location.lng, onHintsUpdate]);
+    onHintsUpdateRef.current(hints);
+  }, [hints]);
 
   async function getHint() {
-    if (hints.length >= 3) return;
+    if (busyRef.current || hints.length >= 3) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
       const hint = await requestHint(location, hints.length, view);
       if (!isMounted.current) return;
-      const next = [...hints, hint];
-      setHints(next);
-      onHintsUpdate(next);
+      setHints((current) => (current.length >= 3 ? current : [...current, hint]));
     } catch (err) {
       if (!isMounted.current) return;
       setError(err instanceof Error ? err.message : "Failed to load hint");
     } finally {
+      busyRef.current = false;
       if (isMounted.current) setBusy(false);
     }
   }
