@@ -9,9 +9,10 @@ type Props = {
   view?: PanoramaView | null;
   disabled: boolean;
   onHintUsed: (count: number) => void;
+  onHintsChange?: (hints: Hint[]) => void;
 };
 
-export function HintPanel({ location, view, disabled, onHintUsed }: Props) {
+export function HintPanel({ location, view, disabled, onHintUsed, onHintsChange }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -19,7 +20,8 @@ export function HintPanel({ location, view, disabled, onHintUsed }: Props) {
     setHints([]);
     setBusy(false);
     onHintUsed(0);
-  }, [location.lat, location.lng, onHintUsed]);
+    onHintsChange?.([]);
+  }, [location.lat, location.lng, onHintUsed, onHintsChange]);
 
   async function getHint() {
     if (hints.length >= 3) return;
@@ -28,6 +30,7 @@ export function HintPanel({ location, view, disabled, onHintUsed }: Props) {
     const next = [...hints, hint];
     setHints(next);
     onHintUsed(next.length);
+    onHintsChange?.(next);
     setBusy(false);
   }
 

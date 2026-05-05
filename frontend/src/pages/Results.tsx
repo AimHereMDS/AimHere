@@ -1,4 +1,4 @@
-import { Bot, RotateCcw, Trophy } from "lucide-react";
+import { Bot, Lightbulb, RotateCcw, Trophy } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 
 import { SummaryMap } from "../components/Map/SummaryMap";
@@ -18,6 +18,11 @@ export function Results() {
   const roundsWon = game.rounds.filter((round) => round.result.score >= (round.result.ai_score ?? -1)).length;
   const isPve = game.mode === "pve";
   const playerWon = isPve && score > aiScore;
+  const pveRounds = game.rounds.filter((round) => round.result.ai_distance_km !== null && round.result.ai_distance_km !== undefined);
+  const averageDistanceDelta =
+    pveRounds.length > 0
+      ? pveRounds.reduce((sum, round) => sum + ((round.result.ai_distance_km ?? 0) - round.result.distance_km), 0) / pveRounds.length
+      : 0;
 
   return (
     <main className="app-shell mx-auto max-w-6xl px-4 py-8">
@@ -32,12 +37,22 @@ export function Results() {
           <span className="text-2xl text-slate-400"> / 25,000</span>
         </h1>
         {isPve && (
-          <p className="mt-3 text-slate-300">
-            AI scored <span className="font-black text-amber-300">{aiScore.toLocaleString()}</span> / you won {roundsWon}/5 rounds /{" "}
-            <span className={playerWon ? "font-black uppercase text-teal-300" : score === aiScore ? "font-black uppercase text-slate-200" : "font-black uppercase text-red-300"}>
-              {playerWon ? "You win" : score === aiScore ? "Tied" : "AI wins"}
-            </span>
-          </p>
+          <div className="mt-3 text-slate-300">
+            <p>
+              AI scored <span className="font-black text-amber-300">{aiScore.toLocaleString()}</span> / you won {roundsWon}/5 rounds /{" "}
+              <span className={playerWon ? "font-black uppercase text-teal-300" : score === aiScore ? "font-black uppercase text-slate-200" : "font-black uppercase text-red-300"}>
+                {playerWon ? "You win" : score === aiScore ? "Tied" : "AI wins"}
+              </span>
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Average distance difference:{" "}
+              <span className={averageDistanceDelta >= 0 ? "font-black text-teal-300" : "font-black text-red-300"}>
+                {averageDistanceDelta >= 0 ? "+" : ""}
+                {formatKm(Math.abs(averageDistanceDelta))}
+              </span>{" "}
+              vs AI
+            </p>
+          </div>
         )}
       </div>
 
@@ -57,9 +72,27 @@ export function Results() {
                 {round.hintsUsed > 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
               </div>
               {isPve && round.result.ai_guess && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-200">
-                  <Bot size={14} />
-                  AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+                <div className="mt-2 space-y-1.5 text-xs text-amber-200">
+                  <div className="flex items-center gap-1.5">
+                    <Bot size={14} />
+                    AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+                  </div>
+                  <p className="leading-5 text-amber-100/75">{round.result.ai_guess.explanation}</p>
+                </div>
+              )}
+              {(round.hintLog?.length ?? 0) > 0 && (
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
+                    <Lightbulb size={14} />
+                    Hint log
+                  </div>
+                  <div className="space-y-1.5">
+                    {round.hintLog.map((hint) => (
+                      <p className="text-xs leading-5 text-slate-400" key={hint.level}>
+                        <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
