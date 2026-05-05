@@ -13,8 +13,8 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 - Interactive `StreetViewPanorama`, not static images.
 - Rotation-only, limited-movement, and full-movement modes.
 - Five-round single-player gameplay.
-- PvE mode with easy, medium, and hard AI opponent guesses, plus optional Street View image context for AI reasoning.
-- Progressive Hint Agent with score penalties and optional Street View image context.
+- PvE mode with easy, medium, and hard AI opponent guesses from the current Street View frame.
+- Progressive visual Hint Agent with score penalties.
 - End-game summary map with real locations, guesses, and connecting lines.
 
 ## Tech Stack
@@ -27,11 +27,13 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 ## Setup
 
 1. Create a Supabase project for PostgreSQL hosting.
-2. Enable a Google Maps JavaScript API key with Maps JavaScript API and Street View metadata access.
+2. Enable a Google Maps JavaScript API key with Maps JavaScript API, Street View Static API, and Street View metadata access.
 3. Create an Anthropic API key.
 4. Copy `.env.example` to `.env` and fill in values.
 
 The backend uses `ANTHROPIC_MODEL=claude-sonnet-4-20250514` by default. Override it in `.env` if your Anthropic account requires a different available model.
+
+Visual hints and visual opponent guesses require both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY`. Without the Google Maps key, the app still runs, but the Hint Agent falls back to generic player-style advice and the Opponent Agent falls back to deterministic difficulty-based placement instead of scene-specific visual reasoning.
 
 Backend:
 ```bash

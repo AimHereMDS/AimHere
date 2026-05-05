@@ -58,7 +58,7 @@ Output:
 
 Prompt pattern: ask Claude to infer from the same visible Street View frame as the player, using clues like road signs, language, web domains, architecture, vegetation, road markings, and license plates. It must return exactly three strings ordered by usefulness, not by fixed categories like continent/country/region. When both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY` are configured, the backend fetches a Google Street View Static image for the current panorama view and sends it to Claude as image context.
 
-Known limitations: without a Google Maps key, or if the static image request fails, visual hinting falls back to generic player-style advice instead of scene-specific clues.
+Known limitations: visual hinting requires both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY`. Without a Google Maps key, or if the static image request fails, hints fall back to generic player-style advice instead of scene-specific clues.
 
 ## Opponent Agent
 
@@ -90,7 +90,7 @@ Output:
 
 Prompt pattern: ask Claude to place a map guess from visible evidence only, using the current Street View Static frame. The prompt does not reveal the real coordinates or pano metadata. If no image is available, deterministic geodesic noise provides a fallback guess for the configured difficulty.
 
-Known limitations: without image context, the opponent cannot make a true visual guess and falls back to deterministic difficulty-based placement with a generic explanation.
+Known limitations: visual opponent guesses require both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY`. Without image context, the opponent cannot make a true visual guess and falls back to deterministic difficulty-based placement with a generic explanation.
 
 ## Running Evals
 
@@ -102,5 +102,5 @@ pytest
 
 Eval coverage:
 - `test_curator_agent.py`: checks requested geographic regions.
-- `test_hint_agent.py`: checks progressive hint format and score multipliers.
-- `test_opponent_agent.py`: checks difficulty distance ranges.
+- `test_hint_agent.py`: checks progressive hint format, score multipliers, current-view image usage, and prompt privacy.
+- `test_opponent_agent.py`: checks difficulty distance ranges, visual guess parsing, current-view image usage, and prompt privacy.

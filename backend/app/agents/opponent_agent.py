@@ -3,11 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import random
 
 from anthropic import Anthropic
 
-from app.agents.geo import coordinate_with_offset
+from app.agents.geo import coordinate_with_offset, haversine_km
 from app.agents.street_view import street_view_static_image
 from app.database import get_settings
 from app.schemas import PanoramaView
@@ -20,6 +21,13 @@ DIFFICULTY_RANGES_KM = {
     "hard": (15, 180),
 }
 
+VISUAL_DISTANCE_WEIGHTS = {
+    "easy": 0.25,
+    "medium": 0.65,
+}
+
+MIN_VISUAL_BEARING_DISTANCE_KM = 1.0
+
 
 def _deterministic_noise(lat: float, lng: float, difficulty: str) -> tuple[float, float, float]:
     min_km, max_km = DIFFICULTY_RANGES_KM.get(difficulty, DIFFICULTY_RANGES_KM["medium"])
@@ -30,16 +38,6 @@ def _deterministic_noise(lat: float, lng: float, difficulty: str) -> tuple[float
     bearing = rng.uniform(0, 360)
     out_lat, out_lng = coordinate_with_offset(lat, lng, distance, bearing)
     return out_lat, out_lng, distance
-
-
-def _parse_explanation(text: str) -> str:
-    try:
-        start = text.find("{")
-        end = text.rfind("}")
-        parsed = json.loads(text[start : end + 1])
-        return str(parsed.get("explanation") or "")
-    except Exception:
-        return ""
 
 
 def _parse_visual_guess(text: str) -> tuple[float, float, str] | None:
@@ -57,6 +55,41 @@ def _parse_visual_guess(text: str) -> tuple[float, float, str] | None:
     return guess_lat, guess_lng, explanation
 
 
+def _initial_bearing_deg(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> float:
+    lat1 = math.radians(a_lat)
+    lat2 = math.radians(b_lat)
+    d_lng = math.radians(b_lng - a_lng)
+    y = math.sin(d_lng) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(d_lng)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
+def _difficulty_adjusted_visual_guess(
+    lat: float,
+    lng: float,
+    difficulty: str,
+    visual_lat: float,
+    visual_lng: float,
+    fallback_lat: float,
+    fallback_lng: float,
+    fallback_distance_km: float,
+) -> tuple[float, float]:
+    if difficulty == "hard":
+        return visual_lat, visual_lng
+
+    visual_distance_km = haversine_km(lat, lng, visual_lat, visual_lng)
+    bearing = (
+        _initial_bearing_deg(lat, lng, fallback_lat, fallback_lng)
+        if visual_distance_km < MIN_VISUAL_BEARING_DISTANCE_KM
+        else _initial_bearing_deg(lat, lng, visual_lat, visual_lng)
+    )
+    min_km, max_km = DIFFICULTY_RANGES_KM[difficulty]
+    visual_distance_km = max(min_km, min(max_km, visual_distance_km))
+    visual_weight = VISUAL_DISTANCE_WEIGHTS[difficulty]
+    distance_km = fallback_distance_km * (1 - visual_weight) + visual_distance_km * visual_weight
+    return coordinate_with_offset(lat, lng, distance_km, bearing)
+
+
 async def opponent_guess(
     lat: float,
     lng: float,
@@ -64,7 +97,7 @@ async def opponent_guess(
     view: PanoramaView | None = None,
 ) -> dict[str, str | float]:
     difficulty = difficulty if difficulty in DIFFICULTY_RANGES_KM else "medium"
-    guess_lat, guess_lng, _ = _deterministic_noise(lat, lng, difficulty)
+    guess_lat, guess_lng, fallback_distance_km = _deterministic_noise(lat, lng, difficulty)
     explanation = (
         "Visual panorama context was unavailable, so this fallback guess used the configured "
         f"{difficulty} difficulty without scene-specific visual reasoning."
@@ -124,9 +157,17 @@ async def opponent_guess(
             )
             visual_guess = _parse_visual_guess(message.content[0].text if message.content else "")
             if visual_guess:
-                guess_lat, guess_lng, explanation = visual_guess
-            else:
-                explanation = _parse_explanation(message.content[0].text if message.content else "") or explanation
+                visual_lat, visual_lng, explanation = visual_guess
+                guess_lat, guess_lng = _difficulty_adjusted_visual_guess(
+                    lat,
+                    lng,
+                    difficulty,
+                    visual_lat,
+                    visual_lng,
+                    guess_lat,
+                    guess_lng,
+                    fallback_distance_km,
+                )
         except Exception as exc:
             logger.warning("Opponent Agent fell back to deterministic guess: %s", exc)
     return {
