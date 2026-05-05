@@ -184,8 +184,8 @@ export function Game() {
                   Hints used ({roundHints.length})
                 </div>
                 <div className="mt-2 space-y-2">
-                  {roundHints.map((h, i) => (
-                    <div key={i} className="text-xs leading-5 text-white/65">
+                  {roundHints.map((h) => (
+                    <div key={h.level} className="text-xs leading-5 text-white/65">
                       <span className="font-bold text-slate-300">{h.title}:</span> {h.hint}
                     </div>
                   ))}

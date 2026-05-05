@@ -63,8 +63,8 @@ export function Results() {
                     Hints used ({round.hints.length})
                   </div>
                   <div className="mt-1.5 space-y-1.5">
-                    {round.hints.map((h, i) => (
-                      <p key={i} className="text-xs leading-5 text-slate-300">
+                    {round.hints.map((h) => (
+                      <p key={h.level} className="text-xs leading-5 text-slate-300">
                         <span className="font-bold text-white">{h.title}:</span> {h.hint}
                       </p>
                     ))}
