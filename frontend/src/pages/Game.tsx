@@ -242,7 +242,14 @@ export function Game() {
           onMouseEnter={() => setMapExpanded(true)}
           onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
         >
-          <GuessMap aiGuess={aiGuess} guess={guess} locked={roundComplete} onGuess={setGuess} real={result ? current : undefined} />
+          <GuessMap
+            aiGuess={aiGuess}
+            distanceKm={result?.distance_km}
+            guess={guess}
+            locked={roundComplete}
+            onGuess={setGuess}
+            real={result ? current : undefined}
+          />
         </div>
 
         {!result ? (
