@@ -1,5 +1,5 @@
 import { Lightbulb } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { requestHint } from "../../agents/hintAgent";
 import type { Coordinate, Hint, PanoramaView } from "../../types/game";
@@ -15,6 +15,14 @@ export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setHints([]);
@@ -29,13 +37,15 @@ export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
     setError("");
     try {
       const hint = await requestHint(location, hints.length, view);
+      if (!isMounted.current) return;
       const next = [...hints, hint];
       setHints(next);
       onHintsUpdate(next);
     } catch (err) {
+      if (!isMounted.current) return;
       setError(err instanceof Error ? err.message : "Failed to load hint");
     } finally {
-      setBusy(false);
+      if (isMounted.current) setBusy(false);
     }
   }
 
