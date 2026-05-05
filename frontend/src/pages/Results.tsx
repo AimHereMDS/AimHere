@@ -1,4 +1,4 @@
-import { Bot, RotateCcw, Trophy } from "lucide-react";
+import { Bot, Lightbulb, RotateCcw, Trophy } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 
 import { SummaryMap } from "../components/Map/SummaryMap";
@@ -54,12 +54,32 @@ export function Results() {
               </div>
               <div className="text-sm text-slate-300">
                 {formatKm(round.result.distance_km)} away
-                {round.hintsUsed > 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
+                {round.hintsUsed > 0 && !round.hints?.length && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
               </div>
+              {round.hints && round.hints.length > 0 && (
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
+                    <Lightbulb size={14} />
+                    Hints used ({round.hints.length})
+                  </div>
+                  <div className="mt-1.5 space-y-1.5">
+                    {round.hints.map((h, i) => (
+                      <p key={i} className="text-xs leading-5 text-slate-300">
+                        <span className="font-bold text-white">{h.title}:</span> {h.hint}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
               {isPve && round.result.ai_guess && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-200">
-                  <Bot size={14} />
-                  AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-200">
+                    <Bot size={14} />
+                    AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+                  </div>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-300">
+                    <span className="font-bold text-white">Reasoning:</span> {round.result.ai_guess.explanation}
+                  </p>
                 </div>
               )}
             </div>

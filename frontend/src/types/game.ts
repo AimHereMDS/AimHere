@@ -50,6 +50,7 @@ export type PlayedRound = {
   guess: Coordinate;
   result: RoundResult;
   hintsUsed: number;
+  hints?: Hint[];
 };
 
 export type ActiveGame = {
