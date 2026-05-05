@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { Coordinate } from "../../types/game";
 import { darkMapStyles, markerIcon } from "../../utils/mapStyles";
+import { formatKm } from "../../utils/geo";
 
 type Props = {
   guess: Coordinate | null;
@@ -10,18 +11,27 @@ type Props = {
   real?: Coordinate;
   aiGuess?: Coordinate | null;
   locked?: boolean;
+  distanceKm?: number | null;
 };
 
-export function GuessMap({ guess, onGuess, real, aiGuess, locked }: Props) {
+export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const linesRef = useRef<google.maps.Polyline[]>([]);
+  const lockedRef = useRef(false);
+  const onGuessRef = useRef(onGuess);
+
+  useEffect(() => {
+    lockedRef.current = Boolean(locked);
+    onGuessRef.current = onGuess;
+  }, [locked, onGuess]);
 
   useEffect(() => {
     let clickListener: google.maps.MapsEventListener | null = null;
+    let cancelled = false;
     loadGoogleMaps().then(() => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || cancelled || mapRef.current) return;
       const map = new google.maps.Map(containerRef.current, {
         center: { lat: 20, lng: 0 },
         zoom: 2,
@@ -36,14 +46,15 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked }: Props) {
       });
       mapRef.current = map;
       clickListener = map.addListener("click", (event: google.maps.MapMouseEvent) => {
-        if (locked || !event.latLng || !onGuess) return;
-        onGuess({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+        if (lockedRef.current || !event.latLng || !onGuessRef.current) return;
+        onGuessRef.current({ lat: event.latLng.lat(), lng: event.latLng.lng() });
       });
     });
     return () => {
+      cancelled = true;
       clickListener?.remove();
     };
-  }, [locked, onGuess]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -126,7 +137,12 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked }: Props) {
           Click to place your guess
         </div>
       )}
+      {guess && real && (
+        <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-white/10 bg-slate-950/90 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
+          <div className="font-black uppercase tracking-[0.14em] text-teal-300">Round result</div>
+          {typeof distanceKm === "number" && <div className="mt-1 font-black text-white">Distance: {formatKm(distanceKm)}</div>}
+        </div>
+      )}
     </div>
   );
 }
-
