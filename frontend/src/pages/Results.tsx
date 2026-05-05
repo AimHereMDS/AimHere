@@ -61,42 +61,47 @@ export function Results() {
           <SummaryMap rounds={game.rounds} />
         </div>
         <div className="space-y-3">
-          {game.rounds.map((round) => (
-            <div className="panel p-4" key={round.index}>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Round {round.index}</span>
-                <span className="font-black text-teal-300">+{round.result.score.toLocaleString()}</span>
-              </div>
-              <div className="text-sm text-slate-300">
-                {formatKm(round.result.distance_km)} away
-                {round.hintsUsed > 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
-              </div>
-              {isPve && round.result.ai_guess && (
-                <div className="mt-2 space-y-1.5 text-xs text-amber-200">
-                  <div className="flex items-center gap-1.5">
-                    <Bot size={14} />
-                    AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
-                  </div>
-                  <p className="leading-5 text-amber-100/75">{round.result.ai_guess.explanation}</p>
+          {game.rounds.map((round) => {
+            const hints = round.hintLog ?? round.hints ?? [];
+            return (
+              <div className="panel p-4" key={round.index}>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Round {round.index}</span>
+                  <span className="font-black text-teal-300">+{round.result.score.toLocaleString()}</span>
                 </div>
-              )}
-              {(round.hintLog?.length ?? 0) > 0 && (
-                <div className="mt-3 border-t border-white/10 pt-3">
-                  <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
-                    <Lightbulb size={14} />
-                    Hint log
-                  </div>
-                  <div className="space-y-1.5">
-                    {round.hintLog.map((hint) => (
-                      <p className="text-xs leading-5 text-slate-400" key={hint.level}>
-                        <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
-                      </p>
-                    ))}
-                  </div>
+                <div className="text-sm text-slate-300">
+                  {formatKm(round.result.distance_km)} away
+                  {round.hintsUsed > 0 && hints.length === 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
                 </div>
-              )}
-            </div>
-          ))}
+                {hints.length > 0 && (
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
+                      <Lightbulb size={14} />
+                      Hint log
+                    </div>
+                    <div className="space-y-1.5">
+                      {hints.map((hint) => (
+                        <p className="text-xs leading-5 text-slate-400" key={hint.level}>
+                          <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isPve && round.result.ai_guess && (
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-amber-200">
+                      <Bot size={14} />
+                      AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+                    </div>
+                    <p className="mt-1.5 text-xs leading-5 text-slate-300">
+                      <span className="font-bold text-white">Reasoning:</span> {round.result.ai_guess.explanation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -22,8 +22,8 @@ export function Game() {
   const [game, setGame] = useState<ActiveGame | null>(() => loadActiveGame());
   const [guess, setGuess] = useState<Coordinate | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [hintLog, setHintLog] = useState<Hint[]>([]);
+  const [roundHints, setRoundHints] = useState<Hint[]>([]);
+  const hintsUsed = roundHints.length;
   const [panoramaView, setPanoramaView] = useState<PanoramaView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -56,9 +56,6 @@ export function Game() {
   }, [roundIndex, game?.setup.timer_seconds, roundComplete]);
 
   const canSubmit = Boolean(guess && current && !result && !busy);
-  const handleHintsChange = useCallback((hints: Hint[]) => {
-    setHintLog(hints);
-  }, []);
 
   const submitRound = useCallback(async () => {
     if (!game || !guess || !current) return;
@@ -105,7 +102,7 @@ export function Game() {
     if (!game || !guess || !current || !result) return;
     const updated: ActiveGame = {
       ...game,
-      rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog }],
+      rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog: roundHints }],
     };
     localStorage.setItem("aim-here-active-game", JSON.stringify(updated));
     if (roundIndex >= 5) {
@@ -118,8 +115,7 @@ export function Game() {
     setGame(updated);
     setGuess(null);
     setResult(null);
-    setHintsUsed(0);
-    setHintLog([]);
+    setRoundHints([]);
     setPanoramaView(null);
     setError("");
     setMapExpanded(false);
@@ -135,7 +131,7 @@ export function Game() {
       result && guess && current
         ? {
             ...game,
-            rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog }],
+            rounds: [...game.rounds, { index: roundIndex, real: current, guess, result, hintsUsed, hintLog: roundHints }],
           }
         : game;
     localStorage.setItem("aim-here-active-game", JSON.stringify(savedGame));
@@ -193,14 +189,7 @@ export function Game() {
 
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
         <ScoreBoard rounds={game.rounds} />
-        <HintPanel
-          key={`${game.id}-${roundIndex}`}
-          disabled={roundComplete}
-          location={current}
-          onHintsChange={handleHintsChange}
-          onHintUsed={setHintsUsed}
-          view={panoramaView}
-        />
+        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
       </div>
 
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -209,14 +198,14 @@ export function Game() {
             <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Your guess</div>
             <h2 className="mt-1 text-2xl font-black">+{result.score.toLocaleString()}</h2>
             <p className="text-sm text-white/70">{formatKm(result.distance_km)} away</p>
-            {hintLog.length > 0 && (
+            {roundHints.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
                 <div className="mb-2 flex items-center gap-2 text-sm font-black text-amber-200">
                   <Lightbulb size={16} />
                   Hint log
                 </div>
                 <div className="space-y-1.5">
-                  {hintLog.map((hint) => (
+                  {roundHints.map((hint) => (
                     <p className="text-xs leading-5 text-white/65" key={hint.level}>
                       <span className="font-black text-white/80">{hint.title}:</span> {hint.hint}
                     </p>
@@ -230,7 +219,9 @@ export function Game() {
                   <Bot size={16} />
                   AI +{(result.ai_score ?? 0).toLocaleString()} / {formatKm(result.ai_distance_km ?? 0)} away
                 </div>
-                <p className="mt-1 text-xs leading-5 text-white/65">{result.ai_guess.explanation}</p>
+                <p className="mt-1 text-xs leading-5 text-white/65">
+                  <span className="font-bold text-slate-300">Reasoning:</span> {result.ai_guess.explanation}
+                </p>
               </div>
             )}
           </div>

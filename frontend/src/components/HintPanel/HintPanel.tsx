@@ -1,5 +1,5 @@
 import { Lightbulb } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { requestHint } from "../../agents/hintAgent";
 import type { Coordinate, Hint, PanoramaView } from "../../types/game";
@@ -8,30 +8,47 @@ type Props = {
   location: Coordinate;
   view?: PanoramaView | null;
   disabled: boolean;
-  onHintUsed: (count: number) => void;
-  onHintsChange?: (hints: Hint[]) => void;
+  onHintsChange: (hints: Hint[]) => void;
 };
 
-export function HintPanel({ location, view, disabled, onHintUsed, onHintsChange }: Props) {
+export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const isMounted = useRef(true);
+  const busyRef = useRef(false);
+  const onHintsChangeRef = useRef(onHintsChange);
 
   useEffect(() => {
-    setHints([]);
-    setBusy(false);
-    onHintUsed(0);
-    onHintsChange?.([]);
-  }, [location.lat, location.lng, onHintUsed, onHintsChange]);
+    onHintsChangeRef.current = onHintsChange;
+  }, [onHintsChange]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    onHintsChangeRef.current(hints);
+  }, [hints]);
 
   async function getHint() {
-    if (hints.length >= 3) return;
+    if (busyRef.current || hints.length >= 3) return;
+    busyRef.current = true;
     setBusy(true);
-    const hint = await requestHint(location, hints.length, view);
-    const next = [...hints, hint];
-    setHints(next);
-    onHintUsed(next.length);
-    onHintsChange?.(next);
-    setBusy(false);
+    setError("");
+    try {
+      const hint = await requestHint(location, hints.length, view);
+      if (!isMounted.current) return;
+      setHints((current) => (current.length >= 3 ? current : [...current, hint]));
+    } catch (err) {
+      if (!isMounted.current) return;
+      setError(err instanceof Error ? err.message : "Failed to load hint");
+    } finally {
+      busyRef.current = false;
+      if (isMounted.current) setBusy(false);
+    }
   }
 
   return (
@@ -52,6 +69,7 @@ export function HintPanel({ location, view, disabled, onHintUsed, onHintsChange 
         </button>
       </div>
       <div className="space-y-2">
+        {error && <div className="rounded-md bg-red-950/50 p-3 text-sm text-red-200">{error}</div>}
         {hints.map((hint) => (
           <div key={hint.level} className="rounded-md bg-white/10 p-3">
             <div className="text-sm font-black text-amber-200">{hint.title}</div>
