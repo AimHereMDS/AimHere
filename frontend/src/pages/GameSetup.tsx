@@ -87,6 +87,7 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
                 <button
                   key={chip.label}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => onChange(active ? "" : chip.label)}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all duration-150 ${
                     active
@@ -94,7 +95,7 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
                       : "border-white/10 bg-slate-950/40 text-slate-300 hover:border-teal-300/50 hover:bg-teal-300/[0.07] hover:text-teal-100"
                   }`}
                 >
-                  <span className="text-base leading-none">{chip.emoji}</span>
+                  <span className="text-base leading-none" aria-hidden="true">{chip.emoji}</span>
                   {chip.label}
                 </button>
               );
@@ -137,6 +138,7 @@ export function GameSetup() {
   const [error, setError] = useState("");
 
   function handleLocationModeChange(newMode: LocationMode) {
+    if (newMode === locationMode) return;
     setLocationMode(newMode);
     // Clear filter when switching modes to avoid stale values crossing contexts
     setFilter("");
