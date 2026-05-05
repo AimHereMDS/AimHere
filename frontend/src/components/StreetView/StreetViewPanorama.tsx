@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
-import type { Coordinate, MovementMode } from "../../types/game";
+import type { Coordinate, MovementMode, PanoramaView } from "../../types/game";
 
 type Props = {
   location: Coordinate;
   movementMode: MovementMode;
   movementLimit: number;
   className?: string;
+  onViewChange?: (view: PanoramaView) => void;
 };
 
-export function StreetViewPanorama({ location, movementMode, movementLimit, className }: Props) {
+export function StreetViewPanorama({ location, movementMode, movementLimit, className, onViewChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const previousPanoRef = useRef<string | null>(null);
@@ -20,7 +21,7 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
 
   useEffect(() => {
     let cancelled = false;
-    let listener: google.maps.MapsEventListener | null = null;
+    let listeners: google.maps.MapsEventListener[] = [];
 
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return;
@@ -42,32 +43,53 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
         showRoadLabels: false,
       });
       panoramaRef.current = panorama;
-      listener = panorama.addListener("pano_changed", () => {
-        const current = panorama.getPano();
-        if (!current) return;
-        if (!depthRef.current.has(current)) {
-          const previous = previousPanoRef.current;
-          const previousDepth = previous ? depthRef.current.get(previous) ?? 0 : 0;
-          depthRef.current.set(current, previous ? previousDepth + 1 : 0);
-        }
-        const nextDepth = depthRef.current.get(current) ?? 0;
-        if (movementMode === "limited" && nextDepth > movementLimit && previousPanoRef.current) {
-          setBlocked(true);
-          panorama.setPano(previousPanoRef.current);
-          return;
-        }
-        setBlocked(false);
-        setDepth(nextDepth);
-        previousPanoRef.current = current;
-      });
+      const emitView = () => {
+        const position = panorama.getPosition();
+        const pov = panorama.getPov();
+        const zoom = panorama.getZoom();
+        const fov = typeof zoom === "number" && Number.isFinite(zoom) ? Math.max(10, Math.min(120, 180 / 2 ** zoom)) : 90;
+        if (!position || !pov) return;
+        onViewChange?.({
+          lat: position.lat(),
+          lng: position.lng(),
+          pano_id: panorama.getPano() || null,
+          heading: pov.heading,
+          pitch: pov.pitch,
+          fov,
+        });
+      };
+      listeners = [
+        panorama.addListener("pano_changed", () => {
+          const current = panorama.getPano();
+          if (!current) return;
+          if (!depthRef.current.has(current)) {
+            const previous = previousPanoRef.current;
+            const previousDepth = previous ? depthRef.current.get(previous) ?? 0 : 0;
+            depthRef.current.set(current, previous ? previousDepth + 1 : 0);
+          }
+          const nextDepth = depthRef.current.get(current) ?? 0;
+          if (movementMode === "limited" && nextDepth > movementLimit && previousPanoRef.current) {
+            setBlocked(true);
+            panorama.setPano(previousPanoRef.current);
+            return;
+          }
+          setBlocked(false);
+          setDepth(nextDepth);
+          previousPanoRef.current = current;
+          emitView();
+        }),
+        panorama.addListener("position_changed", emitView),
+        panorama.addListener("pov_changed", emitView),
+      ];
+      window.setTimeout(emitView, 0);
     });
 
     return () => {
       cancelled = true;
-      listener?.remove();
+      listeners.forEach((listener) => listener.remove());
       panoramaRef.current = null;
     };
-  }, [location.lat, location.lng, movementMode, movementLimit]);
+  }, [location.lat, location.lng, movementMode, movementLimit, onViewChange]);
 
   return (
     <div className={className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-slate-950"}>

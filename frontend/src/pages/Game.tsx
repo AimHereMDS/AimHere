@@ -7,7 +7,7 @@ import { HintPanel } from "../components/HintPanel/HintPanel";
 import { GuessMap } from "../components/Map/GuessMap";
 import { ScoreBoard } from "../components/ScoreBoard/ScoreBoard";
 import { StreetViewPanorama } from "../components/StreetView/StreetViewPanorama";
-import type { ActiveGame, Coordinate, RoundResult } from "../types/game";
+import type { ActiveGame, Coordinate, PanoramaView, RoundResult } from "../types/game";
 import { apiFetch } from "../utils/api";
 import { formatKm, totalScore } from "../utils/geo";
 
@@ -23,6 +23,7 @@ export function Game() {
   const [guess, setGuess] = useState<Coordinate | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
+  const [panoramaView, setPanoramaView] = useState<PanoramaView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [secondsLeft, setSecondsLeft] = useState<number | null>(game?.setup.timer_seconds ?? null);
@@ -66,6 +67,7 @@ export function Game() {
         guess,
         hint_count: hintsUsed,
         ai_difficulty: game.setup.ai_difficulty,
+        view: panoramaView,
       };
       const response =
         game.mode === "pve"
@@ -76,6 +78,7 @@ export function Game() {
               guess,
               hintCount: hintsUsed,
               aiDifficulty: game.setup.ai_difficulty ?? "medium",
+              view: panoramaView,
             })
           : await apiFetch<RoundResult>(`/games/${game.id}/rounds`, { method: "POST", body: JSON.stringify(payload) });
       setResult(response);
@@ -85,7 +88,7 @@ export function Game() {
     } finally {
       setBusy(false);
     }
-  }, [game, guess, current, roundIndex, hintsUsed]);
+  }, [game, guess, current, roundIndex, hintsUsed, panoramaView]);
 
   useEffect(() => {
     if (secondsLeft === 0 && canSubmit && !timerSubmitRef.current) {
@@ -112,6 +115,7 @@ export function Game() {
     setGuess(null);
     setResult(null);
     setHintsUsed(0);
+    setPanoramaView(null);
     setError("");
     setMapExpanded(false);
     timerSubmitRef.current = false;
@@ -130,6 +134,7 @@ export function Game() {
           location={current}
           movementLimit={game.setup.movement_limit}
           movementMode={game.setup.movement_mode}
+          onViewChange={setPanoramaView}
         />
       </div>
 
@@ -162,7 +167,7 @@ export function Game() {
 
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
         <ScoreBoard rounds={game.rounds} />
-        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintUsed={setHintsUsed} />
+        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintUsed={setHintsUsed} view={panoramaView} />
       </div>
 
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">

@@ -1,4 +1,4 @@
-import type { AiDifficulty, Coordinate, RoundResult } from "../types/game";
+import type { AiDifficulty, Coordinate, PanoramaView, RoundResult } from "../types/game";
 import { apiFetch } from "../utils/api";
 
 export async function submitPveRound(params: {
@@ -8,6 +8,7 @@ export async function submitPveRound(params: {
   guess: Coordinate;
   hintCount: number;
   aiDifficulty: AiDifficulty;
+  view?: PanoramaView | null;
 }) {
   return apiFetch<RoundResult>(`/games/${params.gameId}/rounds`, {
     method: "POST",
@@ -17,7 +18,7 @@ export async function submitPveRound(params: {
       guess: params.guess,
       hint_count: params.hintCount,
       ai_difficulty: params.aiDifficulty,
+      view: params.view,
     }),
   });
 }
-

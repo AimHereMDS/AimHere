@@ -48,19 +48,32 @@ async def nearest_street_view_coordinate(
     return Coordinate(lat=float(out_lat), lng=float(out_lng), label=label)
 
 
-async def street_view_static_image(lat: float, lng: float) -> StreetViewImage | None:
+async def street_view_static_image(
+    lat: float,
+    lng: float,
+    heading: float | None = None,
+    pitch: float | None = None,
+    fov: float | None = None,
+    pano_id: str | None = None,
+) -> StreetViewImage | None:
     settings = get_settings()
     if not settings.google_maps_api_key:
         return None
 
     params = {
         "size": "640x400",
-        "location": f"{lat},{lng}",
-        "fov": 90,
-        "pitch": 0,
+        "fov": round(fov, 2) if fov is not None else 90,
         "source": "outdoor",
         "key": settings.google_maps_api_key,
     }
+    if pano_id:
+        params["pano"] = pano_id
+    else:
+        params["location"] = f"{lat},{lng}"
+    if heading is not None:
+        params["heading"] = round(heading % 360, 2)
+    if pitch is not None:
+        params["pitch"] = round(pitch, 2)
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.get("https://maps.googleapis.com/maps/api/streetview", params=params)

@@ -8,6 +8,7 @@ from app.schemas.game import (
     LocationRequest,
     LocationResponse,
     OpponentGuess,
+    PanoramaView,
     RoundResult,
     RoundSubmit,
     UserProfileOut,
@@ -23,8 +24,8 @@ __all__ = [
     "LocationRequest",
     "LocationResponse",
     "OpponentGuess",
+    "PanoramaView",
     "RoundResult",
     "RoundSubmit",
     "UserProfileOut",
 ]
-

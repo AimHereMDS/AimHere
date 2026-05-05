@@ -34,26 +34,31 @@ Files:
 - `backend/app/agents/hint_agent.py`
 - `frontend/src/agents/hintAgent.ts`
 
-Purpose: returns progressive hints for the current panorama. Level 1 gives continent, level 2 gives country, and level 3 gives region or city. Each hint reduces the max round score.
+Purpose: returns progressively better visual hints for the current panorama. The hints are not fixed categories. Hint 1 is useful but not too direct, hint 2 is more specific, and hint 3 is the strongest visible clue the agent can give without using hidden coordinates. Each hint reduces the max round score.
 
 Input:
 ```json
-{ "lat": 44.4268, "lng": 26.1025, "used_levels": 1 }
+{
+  "lat": 44.4268,
+  "lng": 26.1025,
+  "used_levels": 1,
+  "view": { "pano_id": "abc123", "heading": 210.5, "pitch": -4, "fov": 72 }
+}
 ```
 
 Output:
 ```json
 {
   "level": 2,
-  "title": "Country clue",
-  "hint": "The country is likely Romania.",
+  "title": "Hint 2",
+  "hint": "A visible .ro web domain and Romanian-looking diacritics make Romania a strong guess.",
   "max_score_multiplier": 0.7
 }
 ```
 
-Prompt pattern: ask Claude to infer likely visual clues from road signs, language, architecture, vegetation, road markings, and license plates, returning exactly three progressive strings. When both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY` are configured, the backend also fetches a Google Street View Static image and sends it to Claude as image context.
+Prompt pattern: ask Claude to infer from the same visible Street View frame as the player, using clues like road signs, language, web domains, architecture, vegetation, road markings, and license plates. It must return exactly three strings ordered by usefulness, not by fixed categories like continent/country/region. When both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY` are configured, the backend fetches a Google Street View Static image for the current panorama view and sends it to Claude as image context.
 
-Known limitations: without a Google Maps key, or if the static image request fails, visual clue language falls back to coordinate-based context.
+Known limitations: without a Google Maps key, or if the static image request fails, visual hinting falls back to generic player-style advice instead of scene-specific clues.
 
 ## Opponent Agent
 
@@ -61,26 +66,31 @@ Files:
 - `backend/app/agents/opponent_agent.py`
 - `frontend/src/agents/opponentAgent.ts`
 
-Purpose: powers PvE. The AI guesses after the player submits a pin, with easy, medium, and hard difficulty affecting average error radius.
+Purpose: powers PvE. The AI guesses after the player submits a pin by looking at the same Street View frame, with easy, medium, and hard difficulty affecting how ambitious the visual estimate should be.
 
 Input:
 ```json
-{ "lat": 48.8584, "lng": 2.2945, "difficulty": "medium" }
+{
+  "lat": 48.8584,
+  "lng": 2.2945,
+  "difficulty": "medium",
+  "view": { "pano_id": "abc123", "heading": 210.5, "pitch": -4, "fov": 72 }
+}
 ```
 
 Output:
 ```json
 {
-  "lat": 48.1,
-  "lng": 5.7,
+  "lat": 45.0,
+  "lng": 25.0,
   "difficulty": "medium",
-  "explanation": "Medium AI balanced regional clues with uncertainty..."
+  "explanation": "A .ro sign and Romanian-looking road furniture suggest Romania, but the exact city is uncertain."
 }
 ```
 
-Prompt pattern: ask Claude for concise GeoGuessr-style reasoning, optionally with a Street View Static image when Google Maps is configured, while deterministic geodesic noise enforces difficulty ranges.
+Prompt pattern: ask Claude to place a map guess from visible evidence only, using the current Street View Static frame. The prompt does not reveal the real coordinates or pano metadata. If no image is available, deterministic geodesic noise provides a fallback guess for the configured difficulty.
 
-Known limitations: without image context, the explanation is AI-generated from coordinates and may mention plausible clues rather than verified OCR.
+Known limitations: without image context, the opponent cannot make a true visual guess and falls back to deterministic difficulty-based placement with a generic explanation.
 
 ## Running Evals
 

@@ -4,6 +4,15 @@ export type Coordinate = {
   label?: string | null;
 };
 
+export type PanoramaView = {
+  lat: number;
+  lng: number;
+  pano_id?: string | null;
+  heading?: number | null;
+  pitch?: number | null;
+  fov?: number | null;
+};
+
 export type MovementMode = "rotation" | "limited" | "full";
 export type GameMode = "single" | "pve";
 export type LocationMode = "default" | "custom" | "filter";
