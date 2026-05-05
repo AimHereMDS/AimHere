@@ -14,21 +14,29 @@ type Props = {
 export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setHints([]);
     setBusy(false);
+    setError("");
     onHintsUpdate([]);
   }, [location.lat, location.lng, onHintsUpdate]);
 
   async function getHint() {
     if (hints.length >= 3) return;
     setBusy(true);
-    const hint = await requestHint(location, hints.length, view);
-    const next = [...hints, hint];
-    setHints(next);
-    onHintsUpdate(next);
-    setBusy(false);
+    setError("");
+    try {
+      const hint = await requestHint(location, hints.length, view);
+      const next = [...hints, hint];
+      setHints(next);
+      onHintsUpdate(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load hint");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -49,6 +57,7 @@ export function HintPanel({ location, view, disabled, onHintsUpdate }: Props) {
         </button>
       </div>
       <div className="space-y-2">
+        {error && <div className="rounded-md bg-red-950/50 p-3 text-sm text-red-200">{error}</div>}
         {hints.map((hint) => (
           <div key={hint.level} className="rounded-md bg-white/10 p-3">
             <div className="text-sm font-black text-amber-200">{hint.title}</div>
