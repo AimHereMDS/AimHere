@@ -89,20 +89,27 @@ async def progressive_hint(
             client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
             message = await client.messages.create(
                 model=settings.anthropic_model,
-                max_tokens=450,
+                max_tokens=600,
                 temperature=0.1,
                 system=(
                     "You are the visual Hint Agent for a GeoGuessr-like game. You see only the same "
                     "Street View frame as the player. Never rely on coordinates, metadata, labels, or "
                     "the correct answer. Reason from visible clues such as text, domains, signs, plates, "
-                    "road furniture, architecture, vegetation, terrain, and road layout. Return only a "
+                    "road furniture, architecture, vegetation, terrain, and road layout. Return ONLY a "
                     "JSON array of exactly three strings ordered from useful to stronger to strongest. "
-                    "Do not organize them into named categories; each string must cite the visual clue "
-                    "and the inference a player could make from it."
+                    "No prose, no preamble, no markdown fences. Do not organize them into named "
+                    "categories; each string must cite the visual clue and the inference a player could "
+                    "make from it."
                 ),
-                messages=[{"role": "user", "content": content}],
+                messages=[
+                    {"role": "user", "content": content},
+                    {"role": "assistant", "content": "["},
+                ],
             )
-            hints = _parse_hints(message.content[0].text if message.content else "[]")
+            raw_text = message.content[0].text if message.content else ""
+            if raw_text and not raw_text.lstrip().startswith("["):
+                raw_text = "[" + raw_text
+            hints = _parse_hints(raw_text)
         except Exception as exc:
             logger.warning("Hint Agent fell back to generic visual hints: %s", exc)
             hints = _fallback_hints()
