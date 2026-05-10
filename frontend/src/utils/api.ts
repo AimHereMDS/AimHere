@@ -8,6 +8,28 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function readErrorMessage(response: Response): Promise<string> {
+  const text = await response.text();
+  if (text) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object") {
+        const detail = (parsed as { detail?: unknown }).detail;
+        if (typeof detail === "string" && detail.trim()) return detail;
+        if (Array.isArray(detail)) {
+          const first = detail.find(
+            (item) => item && typeof item === "object" && typeof (item as { msg?: unknown }).msg === "string",
+          );
+          if (first) return (first as { msg: string }).msg;
+        }
+      }
+    } catch {
+      return text;
+    }
+  }
+  return `Request failed with ${response.status}`;
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -25,8 +47,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       signal: options.signal ?? controller?.signal,
     });
     if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(detail || `Request failed with ${response.status}`);
+      throw new Error(await readErrorMessage(response));
     }
     return (await response.json()) as T;
   } catch (err) {
