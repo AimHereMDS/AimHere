@@ -1,8 +1,9 @@
-import { Bot, Lightbulb, RotateCcw, Trophy } from "lucide-react";
+import { Bot, ChevronDown, Lightbulb, RotateCcw, Trophy } from "lucide-react";
+import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import { SummaryMap } from "../components/Map/SummaryMap";
-import type { ActiveGame } from "../types/game";
+import type { ActiveGame, PlayedRound } from "../types/game";
 import { formatKm, totalScore } from "../utils/geo";
 
 function lastGame(): ActiveGame | null {
@@ -61,47 +62,9 @@ export function Results() {
           <SummaryMap rounds={game.rounds} />
         </div>
         <div className="space-y-3">
-          {game.rounds.map((round) => {
-            const hints = round.hintLog ?? round.hints ?? [];
-            return (
-              <div className="panel p-4" key={round.index}>
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Round {round.index}</span>
-                  <span className="font-black text-teal-300">+{round.result.score.toLocaleString()}</span>
-                </div>
-                <div className="text-sm text-slate-300">
-                  {formatKm(round.result.distance_km)} away
-                  {round.hintsUsed > 0 && hints.length === 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
-                </div>
-                {hints.length > 0 && (
-                  <div className="mt-3 border-t border-white/10 pt-3">
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-amber-200">
-                      <Lightbulb size={14} />
-                      Hint log
-                    </div>
-                    <div className="space-y-1.5">
-                      {hints.map((hint) => (
-                        <p className="text-xs leading-5 text-slate-400" key={hint.level}>
-                          <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {isPve && round.result.ai_guess && (
-                  <div className="mt-3 border-t border-white/10 pt-3">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-amber-200">
-                      <Bot size={14} />
-                      AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
-                    </div>
-                    <p className="mt-1.5 text-xs leading-5 text-slate-300">
-                      <span className="font-bold text-white">Reasoning:</span> {round.result.ai_guess.explanation}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {game.rounds.map((round) => (
+            <RoundCard isPve={isPve} key={round.index} round={round} />
+          ))}
         </div>
       </div>
 
@@ -113,5 +76,81 @@ export function Results() {
       </div>
 
     </main>
+  );
+}
+
+type RoundCardProps = {
+  round: PlayedRound;
+  isPve: boolean;
+};
+
+function RoundCard({ round, isPve }: RoundCardProps) {
+  const hints = round.hintLog ?? round.hints ?? [];
+  const aiGuess = round.result.ai_guess;
+  const showAiSection = isPve && Boolean(aiGuess);
+  const [showHints, setShowHints] = useState(false);
+  const [showAi, setShowAi] = useState(false);
+
+  return (
+    <div className="panel p-4">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Round {round.index}</span>
+        <span className="font-black text-teal-300">+{round.result.score.toLocaleString()}</span>
+      </div>
+      <div className="text-sm text-slate-300">
+        {formatKm(round.result.distance_km)} away
+        {round.hintsUsed > 0 && hints.length === 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
+      </div>
+      {hints.length > 0 && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <button
+            className="flex w-full items-center justify-between gap-2 text-left text-xs font-black uppercase tracking-[0.14em] text-amber-200"
+            onClick={() => setShowHints((value) => !value)}
+            type="button"
+          >
+            <span className="flex items-center gap-1.5">
+              <Lightbulb size={14} />
+              Hint log ({hints.length})
+            </span>
+            <ChevronDown
+              className={`text-slate-400 transition-transform ${showHints ? "rotate-180" : ""}`}
+              size={14}
+            />
+          </button>
+          {showHints && (
+            <div className="mt-2 space-y-1.5">
+              {hints.map((hint) => (
+                <p className="text-xs leading-5 text-slate-400" key={hint.level}>
+                  <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {showAiSection && aiGuess && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <button
+            className="flex w-full items-center justify-between gap-2 text-left text-xs font-black text-amber-200"
+            onClick={() => setShowAi((value) => !value)}
+            type="button"
+          >
+            <span className="flex items-center gap-1.5">
+              <Bot size={14} />
+              AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
+            </span>
+            <ChevronDown
+              className={`text-slate-400 transition-transform ${showAi ? "rotate-180" : ""}`}
+              size={14}
+            />
+          </button>
+          {showAi && (
+            <p className="mt-1.5 text-xs leading-5 text-slate-300">
+              <span className="font-bold text-white">Reasoning:</span> {aiGuess.explanation}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
