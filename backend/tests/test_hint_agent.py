@@ -45,7 +45,7 @@ async def test_hint_agent_uses_current_view_image_without_coordinates(monkeypatc
         return {"media_type": "image/jpeg", "data": "abc123"}
 
     class FakeMessages:
-        def create(self, **kwargs):
+        async def create(self, **kwargs):
             captured["anthropic_request"] = kwargs
             return SimpleNamespace(
                 content=[
@@ -59,12 +59,12 @@ async def test_hint_agent_uses_current_view_image_without_coordinates(monkeypatc
                 ]
             )
 
-    class FakeAnthropic:
-        def __init__(self, api_key):
+    class FakeAsyncAnthropic:
+        def __init__(self, api_key, **kwargs):
             self.messages = FakeMessages()
 
     monkeypatch.setattr("app.agents.hint_agent.street_view_static_image", fake_street_view_static_image)
-    monkeypatch.setattr("app.agents.hint_agent.Anthropic", FakeAnthropic)
+    monkeypatch.setattr("app.agents.hint_agent.AsyncAnthropic", FakeAsyncAnthropic)
 
     view = PanoramaView(lat=1.23, lng=4.56, pano_id="pano-123", heading=210.5, pitch=-4.0, fov=72)
     hint = await progressive_hint(44.4268, 26.1025, 0, view)

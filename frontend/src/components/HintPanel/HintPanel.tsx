@@ -24,6 +24,7 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
   }, [onHintsChange]);
 
   useEffect(() => {
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
     };

@@ -2,6 +2,7 @@ import { Bot, Clock, DoorOpen, Flag, Lightbulb, MapPin, Trophy } from "lucide-re
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { curateLocations } from "../agents/curatorAgent";
 import { submitPveRound } from "../agents/opponentAgent";
 import { HintPanel } from "../components/HintPanel/HintPanel";
 import { GuessMap } from "../components/Map/GuessMap";
@@ -30,6 +31,10 @@ export function Game() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(game?.setup.timer_seconds ?? null);
   const [mapExpanded, setMapExpanded] = useState(false);
   const timerSubmitRef = useRef(false);
+  const panoramaRetriesRef = useRef<Map<number, number>>(new Map());
+  const replacingLocationRef = useRef(false);
+
+  const MAX_PANORAMA_RETRIES = 2;
 
   const roundIndex = (game?.rounds.length ?? 0) + 1;
   const current = game?.locations[roundIndex - 1] ?? null;
@@ -123,6 +128,36 @@ export function Game() {
     setSecondsLeft(game.setup.timer_seconds ?? null);
   }
 
+  const handlePanoramaUnavailable = useCallback(async () => {
+    if (replacingLocationRef.current || !game || result) return;
+    const previousAttempts = panoramaRetriesRef.current.get(roundIndex) ?? 0;
+    if (previousAttempts >= MAX_PANORAMA_RETRIES) {
+      setError("This location has no Street View. Submit your best guess to continue.");
+      return;
+    }
+    panoramaRetriesRef.current.set(roundIndex, previousAttempts + 1);
+    replacingLocationRef.current = true;
+    try {
+      const { locations } = await curateLocations(
+        game.setup.location_mode,
+        game.setup.filter_text,
+        1,
+      );
+      const replacement = locations[0];
+      if (!replacement) return;
+      const updatedLocations = [...game.locations];
+      updatedLocations[roundIndex - 1] = replacement;
+      const updatedGame: ActiveGame = { ...game, locations: updatedLocations };
+      localStorage.setItem("aim-here-active-game", JSON.stringify(updatedGame));
+      setGame(updatedGame);
+      setPanoramaView(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load a replacement location");
+    } finally {
+      replacingLocationRef.current = false;
+    }
+  }, [game, result, roundIndex]);
+
   const aiGuess = useMemo(() => (result?.ai_guess ? { lat: result.ai_guess.lat, lng: result.ai_guess.lng } : null), [result]);
 
   function saveAndExit() {
@@ -144,10 +179,12 @@ export function Game() {
     <main className="relative h-[calc(100vh-72px)] overflow-hidden bg-black">
       <div className="absolute inset-0">
         <StreetViewPanorama
+          key={`${game.id}-${roundIndex}-${current.lat},${current.lng}`}
           className="relative h-full overflow-hidden bg-slate-200"
           location={current}
           movementLimit={game.setup.movement_limit}
           movementMode={game.setup.movement_mode}
+          onPanoramaUnavailable={handlePanoramaUnavailable}
           onViewChange={setPanoramaView}
         />
       </div>

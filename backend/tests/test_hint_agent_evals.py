@@ -49,16 +49,16 @@ def _patch_hint_agent(monkeypatch, response_text: str, captured: dict[str, objec
         return {"media_type": "image/jpeg", "data": "fakebase64data"}
 
     class FakeMessages:
-        def create(self, **kwargs):
+        async def create(self, **kwargs):
             captured["anthropic_request"] = kwargs
             return SimpleNamespace(content=[SimpleNamespace(text=response_text)])
 
-    class FakeAnthropic:
-        def __init__(self, api_key):
+    class FakeAsyncAnthropic:
+        def __init__(self, api_key, **kwargs):
             self.messages = FakeMessages()
 
     monkeypatch.setattr("app.agents.hint_agent.street_view_static_image", fake_street_view_static_image)
-    monkeypatch.setattr("app.agents.hint_agent.Anthropic", FakeAnthropic)
+    monkeypatch.setattr("app.agents.hint_agent.AsyncAnthropic", FakeAsyncAnthropic)
     return captured
 
 
