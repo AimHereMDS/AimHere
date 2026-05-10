@@ -6,7 +6,7 @@ import logging
 import math
 import random
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from app.agents.geo import coordinate_with_offset, haversine_km
 from app.agents.street_view import street_view_static_image
@@ -27,6 +27,7 @@ VISUAL_DISTANCE_WEIGHTS = {
 }
 
 MIN_VISUAL_BEARING_DISTANCE_KM = 1.0
+MAX_EXPLANATION_LENGTH = 690
 
 
 def _deterministic_noise(lat: float, lng: float, difficulty: str) -> tuple[float, float, float]:
@@ -52,6 +53,8 @@ def _parse_visual_guess(text: str) -> tuple[float, float, str] | None:
         return None
     if not -90 <= guess_lat <= 90 or not -180 <= guess_lng <= 180 or not explanation:
         return None
+    if len(explanation) > MAX_EXPLANATION_LENGTH:
+        explanation = explanation[: MAX_EXPLANATION_LENGTH - 1].rstrip() + "…"
     return guess_lat, guess_lng, explanation
 
 
@@ -141,8 +144,8 @@ async def opponent_guess(
                     },
                 }
             )
-            client = Anthropic(api_key=settings.anthropic_api_key)
-            message = client.messages.create(
+            client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
+            message = await client.messages.create(
                 model=settings.anthropic_model,
                 max_tokens=350,
                 temperature=0.2,

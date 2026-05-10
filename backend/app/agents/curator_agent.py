@@ -5,7 +5,7 @@ import logging
 import random
 from typing import Any
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from app.database import get_settings
 from app.schemas import Coordinate
@@ -79,17 +79,21 @@ async def curate_locations(description: str, count: int = 5) -> list[Coordinate]
         return _fallback_for_query(description, count)
 
     try:
-        client = Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
+        client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
+        message = await client.messages.create(
             model=settings.anthropic_model,
             max_tokens=900,
             temperature=0.2,
             system=(
                 "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
                 "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
-                "locations likely to have Google Street View coverage. Prefer well-known streets, "
-                "public squares, landmarks, and populated areas. Avoid oceans, remote wilderness, "
-                "private property, and clusters of near-identical coordinates. Do not include prose."
+                "locations likely to have Google Street View coverage in daylight. Prefer well-known "
+                "streets, public squares, landmarks, and populated areas. "
+                "Avoid: oceans, remote wilderness, private property, clusters of near-identical "
+                "coordinates, indoor locations, museum interiors, tunnels, caves, mines, parking "
+                "garages, underground stations, polar regions during winter darkness, locations "
+                "photographed at night, and known user-contributed indoor panoramas. "
+                "Do not include prose."
             ),
             messages=[
                 {

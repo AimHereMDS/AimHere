@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from app.database import get_settings
 from app.schemas import PanoramaView
@@ -86,8 +86,8 @@ async def progressive_hint(
                     },
                 }
             )
-            client = Anthropic(api_key=settings.anthropic_api_key)
-            message = client.messages.create(
+            client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
+            message = await client.messages.create(
                 model=settings.anthropic_model,
                 max_tokens=450,
                 temperature=0.1,

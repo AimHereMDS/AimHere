@@ -31,16 +31,16 @@ def patch_visual_opponent(monkeypatch, response_text: str, captured: dict[str, o
         return {"media_type": "image/jpeg", "data": "abc123"}
 
     class FakeMessages:
-        def create(self, **kwargs):
+        async def create(self, **kwargs):
             captured["anthropic_request"] = kwargs
             return SimpleNamespace(content=[SimpleNamespace(text=response_text)])
 
-    class FakeAnthropic:
-        def __init__(self, api_key):
+    class FakeAsyncAnthropic:
+        def __init__(self, api_key, **kwargs):
             self.messages = FakeMessages()
 
     monkeypatch.setattr("app.agents.opponent_agent.street_view_static_image", fake_street_view_static_image)
-    monkeypatch.setattr("app.agents.opponent_agent.Anthropic", FakeAnthropic)
+    monkeypatch.setattr("app.agents.opponent_agent.AsyncAnthropic", FakeAsyncAnthropic)
     return captured
 
 

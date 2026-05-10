@@ -9,22 +9,38 @@ type Props = {
   movementLimit: number;
   className?: string;
   onViewChange?: (view: PanoramaView) => void;
+  onPanoramaUnavailable?: () => void;
 };
 
 const POV_VIEW_EMIT_INTERVAL_MS = 100;
+const PANORAMA_LOOKUP_RADIUS_METERS = 50;
 
-export function StreetViewPanorama({ location, movementMode, movementLimit, className, onViewChange }: Props) {
+export function StreetViewPanorama({
+  location,
+  movementMode,
+  movementLimit,
+  className,
+  onViewChange,
+  onPanoramaUnavailable,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const previousPanoRef = useRef<string | null>(null);
   const depthRef = useRef<Map<string, number>>(new Map());
   const onViewChangeRef = useRef<Props["onViewChange"]>(onViewChange);
+  const onPanoramaUnavailableRef = useRef<Props["onPanoramaUnavailable"]>(onPanoramaUnavailable);
+  const unavailableNotifiedRef = useRef(false);
   const [blocked, setBlocked] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [depth, setDepth] = useState(0);
 
   useEffect(() => {
     onViewChangeRef.current = onViewChange;
   }, [onViewChange]);
+
+  useEffect(() => {
+    onPanoramaUnavailableRef.current = onPanoramaUnavailable;
+  }, [onPanoramaUnavailable]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,13 +61,44 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
       povEmitTimeout = null;
     };
 
+    const notifyUnavailable = () => {
+      if (unavailableNotifiedRef.current) return;
+      unavailableNotifiedRef.current = true;
+      setUnavailable(true);
+      onPanoramaUnavailableRef.current?.();
+    };
+
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return;
       depthRef.current = new Map();
       previousPanoRef.current = null;
+      unavailableNotifiedRef.current = false;
       setBlocked(false);
+      setUnavailable(false);
+
+      const service = new google.maps.StreetViewService();
+      service.getPanorama(
+        {
+          location,
+          radius: PANORAMA_LOOKUP_RADIUS_METERS,
+          source: google.maps.StreetViewSource.OUTDOOR,
+        },
+        (data, status) => {
+          if (cancelled || !containerRef.current) return;
+          const panoId = data?.location?.pano ?? null;
+          if (status !== google.maps.StreetViewStatus.OK || !panoId) {
+            notifyUnavailable();
+            return;
+          }
+          initializePanorama(panoId);
+        },
+      );
+    });
+
+    const initializePanorama = (panoId: string) => {
+      if (cancelled || !containerRef.current) return;
       const panorama = new google.maps.StreetViewPanorama(containerRef.current, {
-        position: location,
+        pano: panoId,
         pov: { heading: Math.random() * 360, pitch: 0 },
         zoom: 1,
         addressControl: false,
@@ -130,7 +177,7 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
         panorama.addListener("pov_changed", emitThrottledPovView),
       ];
       initialEmitTimeout = window.setTimeout(emitViewImmediately, 0);
-    });
+    };
 
     return () => {
       cancelled = true;
@@ -152,6 +199,13 @@ export function StreetViewPanorama({ location, movementMode, movementLimit, clas
       {blocked && (
         <div className="absolute bottom-3 left-3 right-3 rounded-md border border-amber-300/40 bg-amber-400/90 px-3 py-2 text-sm font-black text-slate-950 shadow">
           Movement limit reached. The panorama was returned to the allowed route.
+        </div>
+      )}
+      {unavailable && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-center text-sm font-black text-white">
+          <div className="rounded-md border border-white/10 bg-slate-900 px-4 py-3">
+            This Street View has no usable imagery. Loading another location…
+          </div>
         </div>
       )}
     </div>
