@@ -3,28 +3,49 @@ import { FormEvent, useState } from "react";
 
 import { useAuth } from "../../hooks/useAuth";
 
+type Mode = "login" | "register";
+type FeedbackKind = "error" | "success";
+type Feedback = { kind: FeedbackKind; text: string } | null;
+
 export function AuthCard() {
   const { login, register } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [message, setMessage] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<Mode>("login");
+  const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setFeedback(null);
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (mode === "register" && password !== confirmPassword) {
+      setFeedback({ kind: "error", text: "Passwords do not match." });
+      return;
+    }
     setBusy(true);
-    setMessage("");
+    setFeedback(null);
     try {
       if (mode === "login") {
         await login(email, password);
-        setMessage("Signed in.");
+        setFeedback({ kind: "success", text: "Signed in." });
       } else {
         await register(email, password);
-        setMessage("Account created.");
+        setFeedback({ kind: "success", text: "Account created." });
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Authentication failed.");
+      setFeedback({
+        kind: "error",
+        text: error instanceof Error ? error.message : "Authentication failed.",
+      });
     } finally {
       setBusy(false);
     }
@@ -40,14 +61,14 @@ export function AuthCard() {
         <div className="flex rounded-md border border-white/10 bg-slate-950/50 p-1">
           <button
             className={`rounded px-3 py-1.5 text-sm font-semibold ${mode === "login" ? "bg-teal-400 text-slate-950" : "text-slate-400"}`}
-            onClick={() => setMode("login")}
+            onClick={() => switchMode("login")}
             type="button"
           >
             Login
           </button>
           <button
             className={`rounded px-3 py-1.5 text-sm font-semibold ${mode === "register" ? "bg-teal-400 text-slate-950" : "text-slate-400"}`}
-            onClick={() => setMode("register")}
+            onClick={() => switchMode("register")}
             type="button"
           >
             Register
@@ -76,6 +97,19 @@ export function AuthCard() {
             required
           />
         </label>
+        {mode === "register" && (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-300">Confirm password</span>
+            <input
+              className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-teal-300"
+              minLength={6}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              type="password"
+              value={confirmPassword}
+              required
+            />
+          </label>
+        )}
         <button
           className="flex w-full items-center justify-center gap-2 rounded-md bg-teal-400 px-4 py-2 font-black text-slate-950 disabled:opacity-60"
           disabled={busy}
@@ -84,7 +118,17 @@ export function AuthCard() {
           {mode === "login" ? "Sign in" : "Create account"}
         </button>
       </form>
-      {message && <p className="mt-3 rounded-md bg-white/10 px-3 py-2 text-sm text-slate-200">{message}</p>}
+      {feedback && (
+        <p
+          className={`mt-3 rounded-md px-3 py-2 text-sm ${
+            feedback.kind === "error"
+              ? "border border-red-400/40 bg-red-600/20 text-red-100"
+              : "border border-teal-300/30 bg-teal-400/10 text-teal-100"
+          }`}
+        >
+          {feedback.text}
+        </p>
+      )}
     </div>
   );
 }
