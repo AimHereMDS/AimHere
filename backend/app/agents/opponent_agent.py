@@ -119,7 +119,10 @@ async def opponent_guess(
                 pano_id=view.pano_id if view else None,
             )
             if not image:
-                raise ValueError("No Street View image available for visual opponent guess")
+                raise ValueError(
+                    f"No Street View image available for visual opponent guess (lat={image_lat:.5f}, "
+                    f"lng={image_lng:.5f}, pano_id={view.pano_id if view else None!r})"
+                )
             content: list[dict] = [
                 {
                     "type": "text",
@@ -147,18 +150,25 @@ async def opponent_guess(
             client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
             message = await client.messages.create(
                 model=settings.anthropic_model,
-                max_tokens=350,
+                max_tokens=500,
                 temperature=0.2,
                 system=(
                     "You are the visual Opponent Agent in a GeoGuessr-like PvE match. You do not know "
                     "the real coordinates. You see only the same Street View frame as the player and "
-                    "must estimate a map pin from visible evidence. Return only JSON with lat, lng, and "
-                    "explanation fields. The explanation must cite visible clues and uncertainty, not "
-                    "metadata or hidden coordinates."
+                    "must estimate a map pin from visible evidence. Return ONLY a single JSON object "
+                    "with lat (number), lng (number), and explanation (string) fields. No prose, no "
+                    "preamble, no markdown fences. The explanation must cite visible clues and "
+                    "uncertainty, not metadata or hidden coordinates."
                 ),
-                messages=[{"role": "user", "content": content}],
+                messages=[
+                    {"role": "user", "content": content},
+                    {"role": "assistant", "content": "{"},
+                ],
             )
-            visual_guess = _parse_visual_guess(message.content[0].text if message.content else "")
+            raw_text = message.content[0].text if message.content else ""
+            if raw_text and not raw_text.lstrip().startswith("{"):
+                raw_text = "{" + raw_text
+            visual_guess = _parse_visual_guess(raw_text)
             if visual_guess:
                 visual_lat, visual_lng, explanation = visual_guess
                 guess_lat, guess_lng = _difficulty_adjusted_visual_guess(
@@ -170,6 +180,13 @@ async def opponent_guess(
                     guess_lat,
                     guess_lng,
                     fallback_distance_km,
+                )
+            else:
+                logger.warning(
+                    "Opponent Agent could not parse visual guess (difficulty=%s, response_len=%d): %r",
+                    difficulty,
+                    len(raw_text),
+                    raw_text[:200],
                 )
         except Exception as exc:
             logger.warning("Opponent Agent fell back to deterministic guess: %s", exc)

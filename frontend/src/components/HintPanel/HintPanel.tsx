@@ -1,4 +1,4 @@
-import { Lightbulb } from "lucide-react";
+import { ChevronDown, Lightbulb } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { requestHint } from "../../agents/hintAgent";
@@ -15,6 +15,7 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
   const isMounted = useRef(true);
   const busyRef = useRef(false);
   const onHintsChangeRef = useRef(onHintsChange);
@@ -43,6 +44,7 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
       const hint = await requestHint(location, hints.length, view);
       if (!isMounted.current) return;
       setHints((current) => (current.length >= 3 ? current : [...current, hint]));
+      setExpandedLevel(hint.level);
     } catch (err) {
       if (!isMounted.current) return;
       setError(err instanceof Error ? err.message : "Failed to load hint");
@@ -50,6 +52,10 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
       busyRef.current = false;
       if (isMounted.current) setBusy(false);
     }
+  }
+
+  function toggleHint(level: number) {
+    setExpandedLevel((current) => (current === level ? null : level));
   }
 
   return (
@@ -69,15 +75,32 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
           Hint
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="max-h-[40vh] space-y-1.5 overflow-y-auto pr-1">
         {error && <div className="rounded-md bg-red-950/50 p-3 text-sm text-red-200">{error}</div>}
-        {hints.map((hint) => (
-          <div key={hint.level} className="rounded-md bg-white/10 p-3">
-            <div className="text-sm font-black text-amber-200">{hint.title}</div>
-            <div className="text-sm text-slate-200">{hint.hint}</div>
-            <div className="mt-1 text-xs text-slate-400">Max score: {Math.round(hint.max_score_multiplier * 100)}%</div>
-          </div>
-        ))}
+        {hints.map((hint) => {
+          const isOpen = expandedLevel === hint.level;
+          return (
+            <div key={hint.level} className="rounded-md bg-white/10">
+              <button
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+                onClick={() => toggleHint(hint.level)}
+                type="button"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-amber-200">{hint.title}</span>
+                  <span className="text-xs text-slate-400">{Math.round(hint.max_score_multiplier * 100)}%</span>
+                </div>
+                <ChevronDown
+                  className={`text-slate-300 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  size={16}
+                />
+              </button>
+              {isOpen && (
+                <div className="border-t border-white/5 px-3 py-2 text-sm text-slate-200">{hint.hint}</div>
+              )}
+            </div>
+          );
+        })}
         {!hints.length && <p className="text-sm text-slate-400">No hints used.</p>}
       </div>
     </div>

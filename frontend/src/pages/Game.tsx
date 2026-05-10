@@ -1,4 +1,4 @@
-import { Bot, Clock, DoorOpen, Flag, Lightbulb, MapPin, Trophy } from "lucide-react";
+import { Bot, ChevronDown, Clock, DoorOpen, Flag, Lightbulb, MapPin, Trophy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -30,11 +30,19 @@ export function Game() {
   const [error, setError] = useState("");
   const [secondsLeft, setSecondsLeft] = useState<number | null>(game?.setup.timer_seconds ?? null);
   const [mapExpanded, setMapExpanded] = useState(false);
+  const [showHintLog, setShowHintLog] = useState(false);
+  const [showFullReasoning, setShowFullReasoning] = useState(false);
   const timerSubmitRef = useRef(false);
   const panoramaRetriesRef = useRef<Map<number, number>>(new Map());
   const replacingLocationRef = useRef(false);
 
   const MAX_PANORAMA_RETRIES = 2;
+
+  useEffect(() => {
+    if (!result) return;
+    setShowHintLog(false);
+    setShowFullReasoning(false);
+  }, [result]);
 
   const roundIndex = (game?.rounds.length ?? 0) + 1;
   const current = game?.locations[roundIndex - 1] ?? null;
@@ -231,23 +239,35 @@ export function Game() {
 
       <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
         {result && (
-          <div className="panel-soft w-full max-w-[440px] px-4 py-3 text-white">
+          <div className="panel-soft flex min-h-0 w-full max-w-[440px] flex-col overflow-y-auto px-4 py-3 text-white max-h-[calc(100vh-480px)]">
             <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Your guess</div>
             <h2 className="mt-1 text-2xl font-black">+{result.score.toLocaleString()}</h2>
             <p className="text-sm text-white/70">{formatKm(result.distance_km)} away</p>
             {roundHints.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
-                <div className="mb-2 flex items-center gap-2 text-sm font-black text-amber-200">
-                  <Lightbulb size={16} />
-                  Hint log
-                </div>
-                <div className="space-y-1.5">
-                  {roundHints.map((hint) => (
-                    <p className="text-xs leading-5 text-white/65" key={hint.level}>
-                      <span className="font-black text-white/80">{hint.title}:</span> {hint.hint}
-                    </p>
-                  ))}
-                </div>
+                <button
+                  className="flex w-full items-center justify-between gap-2 text-left text-sm font-black text-amber-200"
+                  onClick={() => setShowHintLog((value) => !value)}
+                  type="button"
+                >
+                  <span className="flex items-center gap-2">
+                    <Lightbulb size={16} />
+                    Hint log ({roundHints.length})
+                  </span>
+                  <ChevronDown
+                    className={`text-slate-300 transition-transform ${showHintLog ? "rotate-180" : ""}`}
+                    size={16}
+                  />
+                </button>
+                {showHintLog && (
+                  <div className="mt-2 space-y-1.5">
+                    {roundHints.map((hint) => (
+                      <p className="text-xs leading-5 text-white/65" key={hint.level}>
+                        <span className="font-black text-white/80">{hint.title}:</span> {hint.hint}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {result.ai_guess && (
@@ -256,9 +276,20 @@ export function Game() {
                   <Bot size={16} />
                   AI +{(result.ai_score ?? 0).toLocaleString()} / {formatKm(result.ai_distance_km ?? 0)} away
                 </div>
-                <p className="mt-1 text-xs leading-5 text-white/65">
+                <p
+                  className={`mt-1 text-xs leading-5 text-white/65 ${showFullReasoning ? "" : "line-clamp-2"}`}
+                >
                   <span className="font-bold text-slate-300">Reasoning:</span> {result.ai_guess.explanation}
                 </p>
+                {result.ai_guess.explanation.length > 140 && (
+                  <button
+                    className="mt-1 text-xs font-black text-teal-300 hover:text-teal-200"
+                    onClick={() => setShowFullReasoning((value) => !value)}
+                    type="button"
+                  >
+                    {showFullReasoning ? "Show less" : "Show more"}
+                  </button>
+                )}
               </div>
             )}
           </div>
