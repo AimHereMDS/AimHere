@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor Player
+    participant Frontend as React Frontend
+    participant Backend as FastAPI Backend
+    participant DB as Supabase PostgreSQL
+    participant Maps as Google Maps / Street View
+    participant AI as Claude Runtime Agents
+
+    Player->>Frontend: Logs in and starts a game
+    Frontend->>Backend: Create or resume game
+    Backend->>DB: Store game and round state
+    Backend-->>Frontend: Return round location data
+    Frontend->>Maps: Load Street View panorama
+    Player->>Frontend: Explores panorama and places guess
+
+    opt Player requests hint
+        Frontend->>Backend: Request hint with current panorama view
+        Backend->>Maps: Fetch Street View static image
+        Backend->>AI: Ask Hint Agent for visual hints
+        AI-->>Backend: Return progressive hints
+        Backend-->>Frontend: Return next hint and score penalty
+    end
+
+    Player->>Frontend: Submits guess
+    Frontend->>Backend: Submit round result
+    Backend->>AI: Ask Opponent Agent for PvE guess if enabled
+    Backend->>DB: Save score, guess, hints, and AI explanation
+    Backend-->>Frontend: Return score and round feedback
+    Frontend-->>Player: Show real location, distance, and results

@@ -1,0 +1,16 @@
+flowchart LR
+    Backlog["Jira backlog / user stories"]
+    Branch["Feature or fix branch"]
+    Commit["Local commits"]
+    PR["GitHub pull request"]
+    CI["GitHub Actions CI"]
+    Review["Code review / fixes"]
+    Main["Merge to main"]
+
+    Backlog --> Branch
+    Branch --> Commit
+    Commit --> PR
+    PR --> CI
+    CI -->|"backend pytest"| Review
+    CI -->|"frontend build"| Review
+    Review --> Main

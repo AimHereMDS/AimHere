@@ -1,0 +1,31 @@
+flowchart LR
+    User["Player / Browser"]
+    Frontend["React + Vite Frontend"]
+    Backend["FastAPI Backend"]
+    Database["Supabase PostgreSQL"]
+    GoogleMaps["Google Maps JavaScript API"]
+    StreetView["Google Street View APIs"]
+    Anthropic["Anthropic Claude API"]
+
+    User --> Frontend
+    Frontend -->|"REST API calls"| Backend
+    Frontend -->|"Interactive map and panorama"| GoogleMaps
+    Backend -->|"SQLAlchemy models"| Database
+    Backend -->|"Street View metadata and static images"| StreetView
+    Backend -->|"Runtime AI prompts"| Anthropic
+
+    subgraph BackendAgents["Backend AI Agents"]
+        Curator["Curator Agent"]
+        Hint["Hint Agent"]
+        Opponent["Opponent Agent"]
+    end
+
+    Backend --> Curator
+    Backend --> Hint
+    Backend --> Opponent
+    Curator --> StreetView
+    Curator --> Anthropic
+    Hint --> StreetView
+    Hint --> Anthropic
+    Opponent --> StreetView
+    Opponent --> Anthropic

@@ -1,0 +1,11 @@
+flowchart LR
+    PR["Pull request"]
+    Tests["Automated tests and build"]
+    Main["main branch"]
+    Deploy["Future deployment job"]
+    Hosting["Frontend/backend hosting"]
+
+    PR --> Tests
+    Tests --> Main
+    Main -. "not implemented yet" .-> Deploy
+    Deploy -. "future CD" .-> Hosting

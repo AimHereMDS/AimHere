@@ -79,6 +79,8 @@ There is no stored location catalog.
 - [PvE Opponent](#features)
 - [AI Agents](./AGENTS.md)
 - [AI Development Report](./docs/ai-development-report.md)
+- [Project Diagrams](./docs/diagrams.md)
+- [Offline Demo Video](./docs/demo/aimhere-demo.webm)
 - [CI and Deployment](./.github/workflows/ci.yml)
 
 ## Tests

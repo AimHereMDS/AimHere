@@ -1,0 +1,30 @@
+flowchart TD
+    Setup["Game setup"]
+    CustomFilter["Custom or predefined location filter"]
+    DefaultMode["Default random world mode"]
+    Curator["Curator Agent"]
+    Metadata["Street View metadata validation"]
+    Round["Playable round location"]
+    Panorama["Current Street View panorama"]
+    Hint["Hint Agent"]
+    Opponent["Opponent Agent"]
+    StaticImage["Street View static image for current view"]
+    Fallback["Deterministic fallback behavior"]
+    Result["Hint / AI guess returned to player"]
+
+    Setup --> CustomFilter
+    Setup --> DefaultMode
+    CustomFilter --> Curator
+    Curator --> Metadata
+    Metadata --> Round
+    DefaultMode --> Round
+    Round --> Panorama
+
+    Panorama --> StaticImage
+    StaticImage --> Hint
+    StaticImage --> Opponent
+    Hint --> Result
+    Opponent --> Result
+
+    StaticImage -. "Unavailable API key or failed image request" .-> Fallback
+    Fallback --> Result
