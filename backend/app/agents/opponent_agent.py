@@ -8,9 +8,9 @@ import random
 
 from anthropic import AsyncAnthropic
 
+from app.agents.base_agent import ClaudeAgent
 from app.agents.geo import coordinate_with_offset, haversine_km
 from app.agents.street_view import street_view_static_image
-from app.database import get_settings
 from app.schemas import PanoramaView
 
 logger = logging.getLogger(__name__)
@@ -93,106 +93,116 @@ def _difficulty_adjusted_visual_guess(
     return coordinate_with_offset(lat, lng, distance_km, bearing)
 
 
+class OpponentAgent(ClaudeAgent):
+    def __init__(self) -> None:
+        super().__init__("Opponent Agent", client_factory=AsyncAnthropic)
+
+    async def opponent_guess(
+        self,
+        lat: float,
+        lng: float,
+        difficulty: str = "medium",
+        view: PanoramaView | None = None,
+    ) -> dict[str, str | float]:
+        difficulty = difficulty if difficulty in DIFFICULTY_RANGES_KM else "medium"
+        guess_lat, guess_lng, fallback_distance_km = _deterministic_noise(lat, lng, difficulty)
+        explanation = (
+            "Visual panorama context was unavailable, so this fallback guess used the configured "
+            f"{difficulty} difficulty without scene-specific visual reasoning."
+        )
+        if self.can_call_claude:
+            try:
+                image_lat = view.lat if view else lat
+                image_lng = view.lng if view else lng
+                image = await street_view_static_image(
+                    image_lat,
+                    image_lng,
+                    heading=view.heading if view else None,
+                    pitch=view.pitch if view else None,
+                    fov=view.fov if view else None,
+                    pano_id=view.pano_id if view else None,
+                )
+                if not image:
+                    raise ValueError(
+                        f"No Street View image available for visual opponent guess (lat={image_lat:.5f}, "
+                        f"lng={image_lng:.5f}, pano_id={view.pano_id if view else None!r})"
+                    )
+                content: list[dict] = [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Difficulty: {difficulty}. You are looking at a Street View frame and must "
+                            "place a map guess from visual evidence only. Easy means a rough regional guess, "
+                            "medium means a balanced country/region guess, and hard means your strongest "
+                            "visual estimate. Use clues such as visible text, web domains like .ro, language, "
+                            "diacritics, signs, license plates, road markings, poles, bollards, architecture, "
+                            "vegetation, terrain, and driving side. Do not use or mention coordinates, hidden "
+                            "metadata, labels, or the correct answer."
+                        ),
+                    }
+                ]
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image["media_type"],
+                            "data": image["data"],
+                        },
+                    }
+                )
+                raw_text = await self.call_claude(
+                    max_tokens=500,
+                    temperature=0.2,
+                    system=(
+                        "You are the visual Opponent Agent in a GeoGuessr-like PvE match. You do not know "
+                        "the real coordinates. You see only the same Street View frame as the player and "
+                        "must estimate a map pin from visible evidence. Return ONLY a single JSON object "
+                        "with lat (number), lng (number), and explanation (string) fields. No prose, no "
+                        "preamble, no markdown fences. The explanation must cite visible clues and "
+                        "uncertainty, not metadata or hidden coordinates."
+                    ),
+                    messages=[
+                        {"role": "user", "content": content},
+                        {"role": "assistant", "content": "{"},
+                    ],
+                )
+                if raw_text and not raw_text.lstrip().startswith("{"):
+                    raw_text = "{" + raw_text
+                visual_guess = _parse_visual_guess(raw_text)
+                if visual_guess:
+                    visual_lat, visual_lng, explanation = visual_guess
+                    guess_lat, guess_lng = _difficulty_adjusted_visual_guess(
+                        lat,
+                        lng,
+                        difficulty,
+                        visual_lat,
+                        visual_lng,
+                        guess_lat,
+                        guess_lng,
+                        fallback_distance_km,
+                    )
+                else:
+                    logger.warning(
+                        "Opponent Agent could not parse visual guess (difficulty=%s, response_len=%d): %r",
+                        difficulty,
+                        len(raw_text),
+                        raw_text[:200],
+                    )
+            except Exception as exc:
+                logger.warning("Opponent Agent fell back to deterministic guess: %s", exc)
+        return {
+            "lat": guess_lat,
+            "lng": guess_lng,
+            "difficulty": difficulty,
+            "explanation": explanation,
+        }
+
+
 async def opponent_guess(
     lat: float,
     lng: float,
     difficulty: str = "medium",
     view: PanoramaView | None = None,
 ) -> dict[str, str | float]:
-    difficulty = difficulty if difficulty in DIFFICULTY_RANGES_KM else "medium"
-    guess_lat, guess_lng, fallback_distance_km = _deterministic_noise(lat, lng, difficulty)
-    explanation = (
-        "Visual panorama context was unavailable, so this fallback guess used the configured "
-        f"{difficulty} difficulty without scene-specific visual reasoning."
-    )
-    settings = get_settings()
-    if settings.anthropic_api_key:
-        try:
-            image_lat = view.lat if view else lat
-            image_lng = view.lng if view else lng
-            image = await street_view_static_image(
-                image_lat,
-                image_lng,
-                heading=view.heading if view else None,
-                pitch=view.pitch if view else None,
-                fov=view.fov if view else None,
-                pano_id=view.pano_id if view else None,
-            )
-            if not image:
-                raise ValueError(
-                    f"No Street View image available for visual opponent guess (lat={image_lat:.5f}, "
-                    f"lng={image_lng:.5f}, pano_id={view.pano_id if view else None!r})"
-                )
-            content: list[dict] = [
-                {
-                    "type": "text",
-                    "text": (
-                        f"Difficulty: {difficulty}. You are looking at a Street View frame and must "
-                        "place a map guess from visual evidence only. Easy means a rough regional guess, "
-                        "medium means a balanced country/region guess, and hard means your strongest "
-                        "visual estimate. Use clues such as visible text, web domains like .ro, language, "
-                        "diacritics, signs, license plates, road markings, poles, bollards, architecture, "
-                        "vegetation, terrain, and driving side. Do not use or mention coordinates, hidden "
-                        "metadata, labels, or the correct answer."
-                    ),
-                }
-            ]
-            content.append(
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": image["media_type"],
-                        "data": image["data"],
-                    },
-                }
-            )
-            client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
-            message = await client.messages.create(
-                model=settings.anthropic_model,
-                max_tokens=500,
-                temperature=0.2,
-                system=(
-                    "You are the visual Opponent Agent in a GeoGuessr-like PvE match. You do not know "
-                    "the real coordinates. You see only the same Street View frame as the player and "
-                    "must estimate a map pin from visible evidence. Return ONLY a single JSON object "
-                    "with lat (number), lng (number), and explanation (string) fields. No prose, no "
-                    "preamble, no markdown fences. The explanation must cite visible clues and "
-                    "uncertainty, not metadata or hidden coordinates."
-                ),
-                messages=[
-                    {"role": "user", "content": content},
-                    {"role": "assistant", "content": "{"},
-                ],
-            )
-            raw_text = message.content[0].text if message.content else ""
-            if raw_text and not raw_text.lstrip().startswith("{"):
-                raw_text = "{" + raw_text
-            visual_guess = _parse_visual_guess(raw_text)
-            if visual_guess:
-                visual_lat, visual_lng, explanation = visual_guess
-                guess_lat, guess_lng = _difficulty_adjusted_visual_guess(
-                    lat,
-                    lng,
-                    difficulty,
-                    visual_lat,
-                    visual_lng,
-                    guess_lat,
-                    guess_lng,
-                    fallback_distance_km,
-                )
-            else:
-                logger.warning(
-                    "Opponent Agent could not parse visual guess (difficulty=%s, response_len=%d): %r",
-                    difficulty,
-                    len(raw_text),
-                    raw_text[:200],
-                )
-        except Exception as exc:
-            logger.warning("Opponent Agent fell back to deterministic guess: %s", exc)
-    return {
-        "lat": guess_lat,
-        "lng": guess_lng,
-        "difficulty": difficulty,
-        "explanation": explanation,
-    }
+    return await OpponentAgent().opponent_guess(lat, lng, difficulty, view)

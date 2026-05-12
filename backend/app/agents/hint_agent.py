@@ -5,7 +5,7 @@ import logging
 
 from anthropic import AsyncAnthropic
 
-from app.database import get_settings
+from app.agents.base_agent import ClaudeAgent
 from app.schemas import PanoramaView
 from app.agents.street_view import street_view_static_image
 
@@ -35,87 +35,97 @@ def _parse_hints(text: str) -> list[str]:
     return hints
 
 
+class HintAgent(ClaudeAgent):
+    def __init__(self) -> None:
+        super().__init__("Hint Agent", client_factory=AsyncAnthropic)
+
+    async def progressive_hint(
+        self,
+        lat: float,
+        lng: float,
+        used_levels: int,
+        view: PanoramaView | None = None,
+    ) -> dict[str, float | int | str]:
+        level = min(3, used_levels + 1)
+        hints = _fallback_hints()
+        if self.can_call_claude:
+            try:
+                image_lat = view.lat if view else lat
+                image_lng = view.lng if view else lng
+                image = await street_view_static_image(
+                    image_lat,
+                    image_lng,
+                    heading=view.heading if view else None,
+                    pitch=view.pitch if view else None,
+                    fov=view.fov if view else None,
+                    pano_id=view.pano_id if view else None,
+                )
+                if not image:
+                    raise ValueError("No Street View image available for visual hinting")
+                content: list[dict] = [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Analyze this Street View frame exactly like a player looking at the panorama. "
+                            "Use only visual evidence visible in the image. Return three hints ordered by "
+                            "usefulness, not by fixed categories: the first should be helpful but not too "
+                            "direct, the second should be more specific, and the third should be the strongest "
+                            "visual clue you can give without using hidden information. "
+                            "Good evidence includes visible text, web domains such as .ro, language, "
+                            "diacritics, road signs, license plates, lane markings, bollards, poles, "
+                            "architecture, vegetation, terrain, and driving side. If evidence is weak, "
+                            "state uncertainty. Do not use or mention coordinates, hidden metadata, labels, "
+                            "or any fixed continent/country/region template. Do not label the hints as "
+                            "continent, country, region, visible, pattern, or narrowing categories."
+                        ),
+                    }
+                ]
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image["media_type"],
+                            "data": image["data"],
+                        },
+                    }
+                )
+                raw_text = await self.call_claude(
+                    max_tokens=600,
+                    temperature=0.1,
+                    system=(
+                        "You are the visual Hint Agent for a GeoGuessr-like game. You see only the same "
+                        "Street View frame as the player. Never rely on coordinates, metadata, labels, or "
+                        "the correct answer. Reason from visible clues such as text, domains, signs, plates, "
+                        "road furniture, architecture, vegetation, terrain, and road layout. Return ONLY a "
+                        "JSON array of exactly three strings ordered from useful to stronger to strongest. "
+                        "No prose, no preamble, no markdown fences. Do not organize them into named "
+                        "categories; each string must cite the visual clue and the inference a player could "
+                        "make from it."
+                    ),
+                    messages=[
+                        {"role": "user", "content": content},
+                        {"role": "assistant", "content": "["},
+                    ],
+                )
+                if raw_text and not raw_text.lstrip().startswith("["):
+                    raw_text = "[" + raw_text
+                hints = _parse_hints(raw_text)
+            except Exception as exc:
+                logger.warning("Hint Agent fell back to generic visual hints: %s", exc)
+                hints = _fallback_hints()
+        return {
+            "level": level,
+            "title": HINT_TITLES[level],
+            "hint": hints[level - 1],
+            "max_score_multiplier": HINT_MULTIPLIERS[level],
+        }
+
+
 async def progressive_hint(
     lat: float,
     lng: float,
     used_levels: int,
     view: PanoramaView | None = None,
 ) -> dict[str, float | int | str]:
-    level = min(3, used_levels + 1)
-    settings = get_settings()
-    hints = _fallback_hints()
-    if settings.anthropic_api_key:
-        try:
-            image_lat = view.lat if view else lat
-            image_lng = view.lng if view else lng
-            image = await street_view_static_image(
-                image_lat,
-                image_lng,
-                heading=view.heading if view else None,
-                pitch=view.pitch if view else None,
-                fov=view.fov if view else None,
-                pano_id=view.pano_id if view else None,
-            )
-            if not image:
-                raise ValueError("No Street View image available for visual hinting")
-            content: list[dict] = [
-                {
-                    "type": "text",
-                    "text": (
-                        "Analyze this Street View frame exactly like a player looking at the panorama. "
-                        "Use only visual evidence visible in the image. Return three hints ordered by "
-                        "usefulness, not by fixed categories: the first should be helpful but not too "
-                        "direct, the second should be more specific, and the third should be the strongest "
-                        "visual clue you can give without using hidden information. "
-                        "Good evidence includes visible text, web domains such as .ro, language, "
-                        "diacritics, road signs, license plates, lane markings, bollards, poles, "
-                        "architecture, vegetation, terrain, and driving side. If evidence is weak, "
-                        "state uncertainty. Do not use or mention coordinates, hidden metadata, labels, "
-                        "or any fixed continent/country/region template. Do not label the hints as "
-                        "continent, country, region, visible, pattern, or narrowing categories."
-                    ),
-                }
-            ]
-            content.append(
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": image["media_type"],
-                        "data": image["data"],
-                    },
-                }
-            )
-            client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
-            message = await client.messages.create(
-                model=settings.anthropic_model,
-                max_tokens=600,
-                temperature=0.1,
-                system=(
-                    "You are the visual Hint Agent for a GeoGuessr-like game. You see only the same "
-                    "Street View frame as the player. Never rely on coordinates, metadata, labels, or "
-                    "the correct answer. Reason from visible clues such as text, domains, signs, plates, "
-                    "road furniture, architecture, vegetation, terrain, and road layout. Return ONLY a "
-                    "JSON array of exactly three strings ordered from useful to stronger to strongest. "
-                    "No prose, no preamble, no markdown fences. Do not organize them into named "
-                    "categories; each string must cite the visual clue and the inference a player could "
-                    "make from it."
-                ),
-                messages=[
-                    {"role": "user", "content": content},
-                    {"role": "assistant", "content": "["},
-                ],
-            )
-            raw_text = message.content[0].text if message.content else ""
-            if raw_text and not raw_text.lstrip().startswith("["):
-                raw_text = "[" + raw_text
-            hints = _parse_hints(raw_text)
-        except Exception as exc:
-            logger.warning("Hint Agent fell back to generic visual hints: %s", exc)
-            hints = _fallback_hints()
-    return {
-        "level": level,
-        "title": HINT_TITLES[level],
-        "hint": hints[level - 1],
-        "max_score_multiplier": HINT_MULTIPLIERS[level],
-    }
+    return await HintAgent().progressive_hint(lat, lng, used_levels, view)

@@ -7,7 +7,7 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 
-from app.database import get_settings
+from app.agents.base_agent import ClaudeAgent
 from app.schemas import Coordinate
 from app.agents.street_view import nearest_street_view_coordinate
 
@@ -73,52 +73,57 @@ async def has_street_view_coverage(lat: float, lng: float) -> bool:
     return await nearest_street_view_coordinate(lat, lng, radius=500) is not None
 
 
-async def curate_locations(description: str, count: int = 5) -> list[Coordinate]:
-    settings = get_settings()
-    if not settings.anthropic_api_key:
-        return _fallback_for_query(description, count)
+class CuratorAgent(ClaudeAgent):
+    def __init__(self) -> None:
+        super().__init__("Curator Agent", client_factory=AsyncAnthropic)
 
-    try:
-        client = AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=25.0, max_retries=1)
-        message = await client.messages.create(
-            model=settings.anthropic_model,
-            max_tokens=900,
-            temperature=0.2,
-            system=(
-                "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
-                "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
-                "locations likely to have Google Street View coverage in daylight. Prefer well-known "
-                "streets, public squares, landmarks, and populated areas. "
-                "Avoid: oceans, remote wilderness, private property, clusters of near-identical "
-                "coordinates, indoor locations, museum interiors, tunnels, caves, mines, parking "
-                "garages, underground stations, polar regions during winter darkness, locations "
-                "photographed at night, and known user-contributed indoor panoramas. "
-                "Do not include prose."
-            ),
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Find {count} diverse playable coordinates matching: {description}",
-                }
-            ],
-        )
-        raw = message.content[0].text if message.content else "[]"
-        parsed = [Coordinate(**item) for item in _extract_json(raw)]
-    except Exception as exc:
-        logger.warning("Curator Agent fell back to static coordinates: %s", exc)
-        return _fallback_for_query(description, count)
-    verified: list[Coordinate] = []
-    for point in parsed:
-        snapped = await nearest_street_view_coordinate(point.lat, point.lng, radius=30000, label=point.label)
-        if snapped:
-            verified.append(snapped)
-        if len(verified) == count:
-            break
-    if len(verified) < count:
-        for point in _fallback_for_query(description, count):
-            if point not in verified:
-                verified.append(point)
+    async def curate_locations(self, description: str, count: int = 5) -> list[Coordinate]:
+        if not self.can_call_claude:
+            return _fallback_for_query(description, count)
+
+        try:
+            raw = await self.call_claude(
+                max_tokens=900,
+                temperature=0.2,
+                system=(
+                    "You are the Curator Agent for a GeoGuessr-like game. Return only JSON: "
+                    "[{\"lat\": number, \"lng\": number, \"label\": string}]. Choose public outdoor "
+                    "locations likely to have Google Street View coverage in daylight. Prefer well-known "
+                    "streets, public squares, landmarks, and populated areas. "
+                    "Avoid: oceans, remote wilderness, private property, clusters of near-identical "
+                    "coordinates, indoor locations, museum interiors, tunnels, caves, mines, parking "
+                    "garages, underground stations, polar regions during winter darkness, locations "
+                    "photographed at night, and known user-contributed indoor panoramas. "
+                    "Do not include prose."
+                ),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Find {count} diverse playable coordinates matching: {description}",
+                    }
+                ],
+            )
+            parsed = [Coordinate(**item) for item in _extract_json(raw)]
+        except Exception as exc:
+            logger.warning("Curator Agent fell back to static coordinates: %s", exc)
+            return _fallback_for_query(description, count)
+
+        verified: list[Coordinate] = []
+        for point in parsed:
+            snapped = await nearest_street_view_coordinate(point.lat, point.lng, radius=30000, label=point.label)
+            if snapped:
+                verified.append(snapped)
             if len(verified) == count:
                 break
-    random.shuffle(verified)
-    return verified[:count]
+        if len(verified) < count:
+            for point in _fallback_for_query(description, count):
+                if point not in verified:
+                    verified.append(point)
+                if len(verified) == count:
+                    break
+        random.shuffle(verified)
+        return verified[:count]
+
+
+async def curate_locations(description: str, count: int = 5) -> list[Coordinate]:
+    return await CuratorAgent().curate_locations(description, count)
