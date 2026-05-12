@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -34,3 +35,22 @@ jobs:
       - run: npm install
       - run: npm run build
 
+  deploy-backend:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render backend deploy
+        env:
+          RENDER_BACKEND_DEPLOY_HOOK_URL: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK_URL }}
+        run: curl -fsS -X POST "$RENDER_BACKEND_DEPLOY_HOOK_URL"
+
+  deploy-frontend:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render frontend deploy
+        env:
+          RENDER_FRONTEND_DEPLOY_HOOK_URL: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK_URL }}
+        run: curl -fsS -X POST "$RENDER_FRONTEND_DEPLOY_HOOK_URL"

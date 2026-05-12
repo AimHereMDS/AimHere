@@ -25,6 +25,7 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 - Frontend: React, Vite, TypeScript, Tailwind CSS, Google Maps JavaScript API.
 - Backend: FastAPI, SQLAlchemy, PostgreSQL on Supabase, Anthropic API, Google Street View metadata API.
 - CI: GitHub Actions.
+- Deployment: Render backend web service and Render static site.
 - Containers: Docker Compose with frontend and backend services only.
 
 ## Setup
@@ -81,6 +82,7 @@ There is no stored location catalog.
 - [AI Development Report](./docs/ai-development-report.md)
 - [Project Diagrams](./docs/diagrams.md)
 - [Offline Demo Video](./docs/demo/aimhere-demo.webm)
+- [Deployment](./docs/deployment.md)
 - [CI and Deployment](./.github/workflows/ci.yml)
 
 ## Tests

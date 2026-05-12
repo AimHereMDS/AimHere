@@ -13,6 +13,8 @@ The goal of using AI during development was not to replace the normal software p
 - Claude was used at the start of the project to define the application idea, check it against the grading requirements, and generate the initial task/backlog structure.
 - The Claude browser extension in Chrome was used to take the generated Jira-task prompt and add the initial tasks directly into the Jira board.
 - Codex and Claude Code were used as implementation assistants for code generation, refactoring, test updates, debugging, and repo operations.
+- Claude Code was useful for local coding sessions where the task was mostly implementation-focused, such as generating first versions of features, adjusting existing files, and checking errors against the surrounding code.
+- Codex was used for later repo-level work: inspecting the real checkout, running tests and builds, editing documentation, creating diagrams and demo artifacts, configuring deployment, working with GitHub, and verifying the live Render deployment.
 - Anthropic Claude is used by the application at runtime for the Curator Agent, Hint Agent, and Opponent Agent when `ANTHROPIC_API_KEY` is configured.
 - Google Street View APIs are used as grounding tools: metadata checks validate playable coordinates, and Static Street View images provide visual context for hints and PvE guesses when `GOOGLE_MAPS_API_KEY` is configured.
 - Jira/Atlassian Rovo was used to inspect project work items, create missing tasks, and track implemented stories or bug fixes.
@@ -33,6 +35,8 @@ AI was used in several concrete development workflows:
 - Writing and extending automated tests, especially eval-style tests for AI-agent behavior.
 - Turning feedback and observed UI defects into Jira issues.
 - Addressing pull request review feedback and keeping changes traceable through branches and PRs.
+- Preparing delivery artifacts such as implementation documentation, AI-agent documentation, Mermaid diagram sources, exported diagram images, and the offline demo video.
+- Configuring CI/CD by connecting the repository to Render, adding GitHub Actions deploy jobs, storing Render deploy hooks as GitHub Actions secrets, and verifying the deployed frontend and backend.
 
 AI suggestions were not accepted blindly. The project used local verification steps such as:
 
@@ -101,6 +105,8 @@ The explanation must cite visible clues and uncertainty, not metadata or hidden 
 - Typed frontend agent clients that call backend endpoints instead of holding provider API keys in the browser.
 - Evaluation tests for curator region matching, progressive hints, visual prompt privacy, opponent difficulty behavior, and fixed-set opponent score trends.
 - CI workflow that runs backend tests and frontend build verification.
+- CD workflow that triggers Render deployments from GitHub Actions after CI succeeds on `main`.
+- Render deployment configuration and deployment documentation.
 - Jira backlog cleanup and bug-tracking tasks.
 
 ## Runtime AI Agents
@@ -137,18 +143,23 @@ The most important lesson was that AI was most useful when given precise constra
 
 ## CI/CD Status
 
-The current GitHub Actions workflow is a CI pipeline. It runs automatically on pull requests and pushes to `main`, installs backend and frontend dependencies, runs backend tests, and verifies the frontend production build.
+The current GitHub Actions workflow is a CI/CD pipeline. It runs automatically on pull requests and pushes to `main`, installs backend and frontend dependencies, runs backend tests, verifies the frontend production build, and deploys to Render after the checks pass on `main`.
 
 Current CI checks:
 
 - Backend: `pip install -r requirements.txt` and `pytest`
 - Frontend: `npm install` and `npm run build`
 
-The current repository does not yet contain a real deployment step to a hosting provider. To make it a complete CI/CD pipeline, the project should add a deployment job after the tests pass, for example:
+Current CD steps:
 
-- deploy the frontend to Vercel or Netlify;
-- deploy the FastAPI backend to Render, Railway, Fly.io, or another server;
-- store deployment tokens and API keys as GitHub Actions secrets;
-- run deployment only from `main` after backend and frontend jobs succeed.
+- Backend: GitHub Actions calls the Render deploy hook stored in `RENDER_BACKEND_DEPLOY_HOOK_URL`.
+- Frontend: GitHub Actions calls the Render deploy hook stored in `RENDER_FRONTEND_DEPLOY_HOOK_URL`.
+- Render builds the backend from `backend/` and starts it with `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+- Render builds the frontend from `frontend/` with `npm install && npm run build` and serves the generated `dist/` directory.
 
-Until that is implemented, the honest description is: the project has CI implemented and has the structure needed to extend it to CD, but it does not yet perform automatic deployment.
+Production deployment:
+
+- Frontend: `https://aimhere-web.onrender.com`
+- Backend API: `https://aimhere-api.onrender.com`
+
+The deployment was verified by checking the backend health endpoint, loading the production frontend, validating CORS for the Render frontend origin, and running a registration smoke test against the deployed API.

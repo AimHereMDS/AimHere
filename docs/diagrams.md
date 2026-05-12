@@ -26,10 +26,10 @@ Source: [`ai-agent-data-flow.mmd`](./diagrams/ai-agent-data-flow.mmd)
 
 Source: [`source-control-ci-workflow.mmd`](./diagrams/source-control-ci-workflow.mmd)
 
-## Deployment Gap
+## CI/CD Deployment
 
-![Deployment Gap](./diagrams/deployment-gap.png)
+![CI/CD Deployment](./diagrams/deployment-gap.png)
 
 Source: [`deployment-gap.mmd`](./diagrams/deployment-gap.mmd)
 
-The current repository implements CI through GitHub Actions. A complete CI/CD workflow still needs an automatic deployment step after successful checks on `main`.
+The repository now implements a complete CI/CD flow: GitHub Actions runs backend tests and the frontend build, then triggers Render deploy hooks for the backend and frontend after successful checks on `main`.

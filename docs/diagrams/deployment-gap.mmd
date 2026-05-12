@@ -1,11 +1,18 @@
 flowchart LR
     PR["Pull request"]
-    Tests["Automated tests and build"]
+    CI["GitHub Actions CI"]
     Main["main branch"]
-    Deploy["Future deployment job"]
-    Hosting["Frontend/backend hosting"]
+    Secrets["GitHub Actions deploy hook secrets"]
+    BackendDeploy["Deploy backend to Render"]
+    FrontendDeploy["Deploy frontend to Render"]
+    Backend["aimhere-api.onrender.com"]
+    Frontend["aimhere-web.onrender.com"]
 
-    PR --> Tests
-    Tests --> Main
-    Main -. "not implemented yet" .-> Deploy
-    Deploy -. "future CD" .-> Hosting
+    PR --> CI
+    CI -->|"pytest + npm build pass"| Main
+    Main -->|"push to main"| BackendDeploy
+    Main -->|"push to main"| FrontendDeploy
+    Secrets --> BackendDeploy
+    Secrets --> FrontendDeploy
+    BackendDeploy --> Backend
+    FrontendDeploy --> Frontend
