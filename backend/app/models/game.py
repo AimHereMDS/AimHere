@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
@@ -24,10 +24,9 @@ class Game(Base):
     ai_total_score: Mapped[int] = mapped_column(Integer, default=0)
     rounds_won: Mapped[int] = mapped_column(Integer, default=0)
     ai_rounds_won: Mapped[int] = mapped_column(Integer, default=0)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     user = relationship("UserProfile", back_populates="games")
     rounds = relationship("Round", back_populates="game", cascade="all, delete-orphan")
     scores = relationship("Score", back_populates="game")
-

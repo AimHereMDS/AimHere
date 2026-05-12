@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
@@ -16,7 +16,7 @@ class Score(Base):
     total_score: Mapped[int] = mapped_column(Integer)
     ai_total_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mode: Mapped[str] = mapped_column(String(20), default="single")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     user = relationship("UserProfile", back_populates="scores")
     game = relationship("Game", back_populates="scores")

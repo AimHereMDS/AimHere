@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -121,7 +121,7 @@ async def finish_game(
         raise HTTPException(status_code=404, detail="Game not found")
     if game.completed_at:
         return {"status": "already_completed", "total_score": game.total_score}
-    game.completed_at = datetime.utcnow()
+    game.completed_at = datetime.now(UTC)
     score = Score(
         user_id=user.id,
         game_id=game.id,
