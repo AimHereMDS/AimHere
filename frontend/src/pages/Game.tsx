@@ -237,7 +237,7 @@ export function Game() {
         <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
       </div>
 
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
+      <div className="absolute bottom-3 right-3 z-20 flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-4 sm:right-4 sm:max-w-[calc(100vw-2rem)]">
         {result && (
           <div className="panel-soft flex min-h-0 w-full max-w-[440px] flex-col overflow-y-auto px-4 py-3 text-white max-h-[calc(100vh-480px)]">
             <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Your guess</div>
@@ -297,7 +297,7 @@ export function Game() {
         {error && <div className="max-w-[440px] rounded-md border border-red-400/40 bg-red-600/30 px-4 py-2 text-sm text-red-100 backdrop-blur">{error}</div>}
 
         <div
-          className={`overflow-hidden rounded-xl border-2 border-white/25 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-80 w-[440px]" : "h-52 w-72"}`}
+          className={`overflow-hidden rounded-xl border-2 border-white/25 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-[min(20rem,45vh)] w-[min(27.5rem,calc(100vw-1.5rem))]" : "h-52 w-[min(18rem,calc(100vw-1.5rem))]"}`}
           onMouseEnter={() => setMapExpanded(true)}
           onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
         >

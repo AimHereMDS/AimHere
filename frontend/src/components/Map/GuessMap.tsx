@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { Coordinate } from "../../types/game";
-import { darkMapStyles, markerIcon } from "../../utils/mapStyles";
+import { darkMapStyles, markerIcon, pinIcon } from "../../utils/mapStyles";
 import { formatKm } from "../../utils/geo";
 
 type Props = {
@@ -70,7 +70,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
           position: guess,
           map,
           title: "Your guess",
-          icon: markerIcon("#f8fafc", "#14b8a6", 9),
+          icon: pinIcon("#f8fafc", "#14b8a6", 1.05),
         }),
       );
       points.push(guess);

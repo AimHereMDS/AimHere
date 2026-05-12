@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { PlayedRound } from "../../types/game";
-import { darkMapStyles, markerIcon } from "../../utils/mapStyles";
+import { darkMapStyles, markerIcon, pinIcon } from "../../utils/mapStyles";
 
 export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -31,7 +31,7 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
           position: round.guess,
           map,
           title: "Your guess",
-          icon: markerIcon("#f8fafc", "#14b8a6", 9),
+          icon: pinIcon("#f8fafc", "#14b8a6", 1.05),
         });
         new google.maps.Polyline({
           path: [round.guess, round.real],
@@ -69,4 +69,3 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
 
   return <div ref={containerRef} className="h-[520px] overflow-hidden rounded-lg border border-white/10 bg-slate-950" />;
 }
-

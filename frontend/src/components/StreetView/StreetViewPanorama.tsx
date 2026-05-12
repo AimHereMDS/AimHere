@@ -1,3 +1,4 @@
+import { Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
@@ -23,6 +24,7 @@ export function StreetViewPanorama({
   onViewChange,
   onPanoramaUnavailable,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const previousPanoRef = useRef<string | null>(null);
@@ -33,6 +35,7 @@ export function StreetViewPanorama({
   const [blocked, setBlocked] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [depth, setDepth] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     onViewChangeRef.current = onViewChange;
@@ -41,6 +44,23 @@ export function StreetViewPanorama({
   useEffect(() => {
     onPanoramaUnavailableRef.current = onPanoramaUnavailable;
   }, [onPanoramaUnavailable]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === rootRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    if (!rootRef.current) return;
+    if (document.fullscreenElement === rootRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+    await rootRef.current.requestFullscreen();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -102,11 +122,13 @@ export function StreetViewPanorama({
         pov: { heading: Math.random() * 360, pitch: 0 },
         zoom: 1,
         addressControl: false,
-        fullscreenControl: true,
+        fullscreenControl: false,
         motionTracking: false,
         motionTrackingControl: false,
         panControl: true,
+        panControlOptions: { position: google.maps.ControlPosition.LEFT_CENTER },
         zoomControl: true,
+        zoomControlOptions: { position: google.maps.ControlPosition.LEFT_CENTER },
         linksControl: movementMode !== "rotation",
         clickToGo: movementMode !== "rotation",
         showRoadLabels: false,
@@ -188,9 +210,20 @@ export function StreetViewPanorama({
     };
   }, [location.lat, location.lng, movementMode, movementLimit]);
 
+  const rootClassName = `${className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-slate-950"} street-view-shell`;
+
   return (
-    <div className={className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-slate-950"}>
+    <div ref={rootRef} className={rootClassName}>
       <div ref={containerRef} className="h-full w-full" />
+      <button
+        aria-label={isFullscreen ? "Exit panorama fullscreen" : "Open panorama fullscreen"}
+        className="absolute left-1/2 top-4 z-20 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-md border border-white/15 bg-slate-950/80 text-white shadow-lg backdrop-blur transition hover:border-teal-300/60 hover:text-teal-200"
+        onClick={toggleFullscreen}
+        title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+        type="button"
+      >
+        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+      </button>
       <div className="absolute left-3 top-3 rounded-md border border-white/10 bg-slate-950/75 px-3 py-2 text-sm font-semibold text-white shadow backdrop-blur">
         {movementMode === "rotation" && "Rotation only"}
         {movementMode === "limited" && `Limited movement: ${depth}/${movementLimit}`}

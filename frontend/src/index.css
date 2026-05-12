@@ -33,6 +33,12 @@ textarea {
   border: none !important;
 }
 
+.street-view-shell:fullscreen {
+  height: 100vh;
+  width: 100vw;
+  background: #000;
+}
+
 @layer components {
   .app-shell {
     min-height: calc(100vh - 72px);
