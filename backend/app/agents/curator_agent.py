@@ -108,13 +108,11 @@ class CuratorAgent(ClaudeAgent):
             logger.warning("Curator Agent fell back to static coordinates: %s", exc)
             return _fallback_for_query(description, count)
 
-        verified: list[Coordinate] = []
-        for point in parsed:
-            snapped = await nearest_street_view_coordinate(point.lat, point.lng, radius=30000, label=point.label)
-            if snapped:
-                verified.append(snapped)
-            if len(verified) == count:
-                break
+        import asyncio
+        snapped_results = await asyncio.gather(
+            *[nearest_street_view_coordinate(p.lat, p.lng, radius=30000, label=p.label) for p in parsed]
+        )
+        verified: list[Coordinate] = [r for r in snapped_results if r is not None][:count]
         if len(verified) < count:
             for point in _fallback_for_query(description, count):
                 if point not in verified:

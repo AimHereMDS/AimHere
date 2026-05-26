@@ -92,7 +92,7 @@ export function Game() {
               real: current,
               guess,
               hintCount: hintsUsed,
-              aiDifficulty: game.setup.ai_difficulty ?? "medium",
+              aiDifficulty: game.setup.ai_difficulty ?? "navigator",
               view: panoramaView,
             })
           : await apiFetch<RoundResult>(`/games/${game.id}/rounds`, { method: "POST", body: JSON.stringify(payload) });
@@ -263,7 +263,7 @@ export function Game() {
 
       <div className="hud-left">
         <div className="hud-glass hud-compass">
-          <CompassRose size={64} />
+          <CompassRose heading={panoramaView?.heading} size={64} />
         </div>
         <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
       </div>

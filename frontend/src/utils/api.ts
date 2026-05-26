@@ -30,21 +30,22 @@ async function readErrorMessage(response: Response): Promise<string> {
   return `Request failed with ${response.status}`;
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(await authHeaders()),
   };
-  new Headers(options.headers).forEach((value, key) => {
+  new Headers(fetchOptions.headers).forEach((value, key) => {
     headers[key] = value;
   });
-  const controller = options.signal ? null : new AbortController();
-  const timeoutId = controller ? window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS) : null;
+  const controller = fetchOptions.signal ? null : new AbortController();
+  const timeoutId = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     const response = await fetch(`${API_URL}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers,
-      signal: options.signal ?? controller?.signal,
+      signal: fetchOptions.signal ?? controller?.signal,
     });
     if (!response.ok) {
       throw new Error(await readErrorMessage(response));
@@ -52,7 +53,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     return (await response.json()) as T;
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${DEFAULT_TIMEOUT_MS / 1000}s`);
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
     }
     throw err;
   } finally {

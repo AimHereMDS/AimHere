@@ -16,14 +16,26 @@ from app.schemas import PanoramaView
 logger = logging.getLogger(__name__)
 
 DIFFICULTY_RANGES_KM = {
-    "easy": (900, 2800),
-    "medium": (180, 850),
-    "hard": (15, 180),
+    "cadet": (1800, 4000),
+    "navigator": (900, 1800),
+    "cartographer": (300, 900),
+    "surveyor": (60, 300),
+    "oracle": (5, 60),
+    # backward compat
+    "easy": (1800, 4000),
+    "medium": (300, 900),
+    "hard": (5, 60),
 }
 
 VISUAL_DISTANCE_WEIGHTS = {
-    "easy": 0.25,
-    "medium": 0.65,
+    "cadet": 0.10,
+    "navigator": 0.30,
+    "cartographer": 0.55,
+    "surveyor": 0.80,
+    "oracle": 1.0,
+    # backward compat
+    "easy": 0.10,
+    "medium": 0.55,
 }
 
 MIN_VISUAL_BEARING_DISTANCE_KM = 1.0
@@ -77,7 +89,7 @@ def _difficulty_adjusted_visual_guess(
     fallback_lng: float,
     fallback_distance_km: float,
 ) -> tuple[float, float]:
-    if difficulty == "hard":
+    if difficulty in ("hard", "oracle", "surveyor"):
         return visual_lat, visual_lng
 
     visual_distance_km = haversine_km(lat, lng, visual_lat, visual_lng)
