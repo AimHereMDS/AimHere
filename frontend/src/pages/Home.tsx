@@ -1,7 +1,9 @@
 import { Bot, Brain, Globe2, MapPinned, PlayCircle, RotateCcw, Settings2, Target, Trophy } from "lucide-react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import { AtlasStat, CompassRose, MiniWorldMap } from "../components/Atlas/Atlas";
+import { AtlasStat, CompassRose } from "../components/Atlas/Atlas";
+import { getCoverageSummary, SAMPLE_COVERAGE_POINTS, WorldCoverageMap } from "../components/Atlas/WorldCoverageMap";
 import { AuthCard } from "../components/Auth/AuthCard";
 import { useAuth } from "../hooks/useAuth";
 import type { ActiveGame } from "../types/game";
@@ -14,6 +16,9 @@ function activeGame(): ActiveGame | null {
 export function Home() {
   const { user } = useAuth();
   const savedGame = user ? activeGame() : null;
+  const userCoveragePoints = user?.world_coverage?.points ?? [];
+  const homeMapPoints = userCoveragePoints.length > 0 ? userCoveragePoints : SAMPLE_COVERAGE_POINTS;
+  const userCoverage = useMemo(() => getCoverageSummary(userCoveragePoints), [userCoveragePoints]);
 
   return (
     <main className="app-shell">
@@ -107,10 +112,10 @@ export function Home() {
                   </Link>
                 </div>
                 <div className="mt-4 grid grid-cols-4 gap-3">
-                  <MiniStat label="Best" value="--" />
-                  <MiniStat label="Avg" value="--" />
-                  <MiniStat label="Games" value="--" />
-                  <MiniStat label="Rank" value="--" />
+                  <MiniStat label="Best" value={user.best_score.toLocaleString()} />
+                  <MiniStat label="Avg" value={Math.round(user.average_score).toLocaleString()} />
+                  <MiniStat label="Games" value={user.games_played.toLocaleString()} />
+                  <MiniStat label="Countries" value={userCoverage.countries.length.toLocaleString()} />
                 </div>
               </div>
             ) : (
@@ -169,23 +174,15 @@ export function Home() {
 
         <section className="surface mt-10 overflow-hidden p-4">
           <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-            <div className="min-h-64 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--bg-inset)]">
-              <MiniWorldMap
-                pins={[
-                  { x: 220, y: 130 },
-                  { x: 480, y: 100 },
-                  { x: 540, y: 205 },
-                  { x: 710, y: 230 },
-                  { x: 820, y: 320 },
-                ].map((pin) => ({ ...pin, color: "var(--accent)" }))}
-              />
+            <div className="world-coverage-frame min-h-64">
+              <WorldCoverageMap points={homeMapPoints} />
             </div>
             <div className="flex flex-col justify-center p-3">
               <span className="eyebrow">Field atlas</span>
               <h3 className="serif mt-2 text-3xl leading-tight text-[var(--ink)]">Every round leaves a mark.</h3>
               <p className="atlas-muted mt-3 text-sm leading-6">
-                The visual system is built around atlas paper, graticule lines, route logs, and real map
-                controls so the game feels geographic before the first panorama loads.
+                Country borders, continent labels, route pins, and score history give each match a place in
+                the same atlas you carry into your profile.
               </p>
               <Link className="btn-secondary mt-5 self-start" to="/setup">
                 <Target size={16} />

@@ -704,6 +704,364 @@ input[type="range"] {
   stroke-width: 1;
 }
 
+.world-coverage-frame {
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 28% 24%, color-mix(in oklab, var(--accent), transparent 90%), transparent 44%),
+    linear-gradient(145deg, color-mix(in oklab, var(--bg-inset), #ffffff 3%), var(--bg-inset));
+}
+
+.world-coverage-map-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  touch-action: none;
+}
+
+.world-coverage-map-shell.is-fullscreen {
+  position: fixed;
+  inset: 16px;
+  z-index: 1000;
+  min-height: calc(100vh - 32px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 28% 24%, color-mix(in oklab, var(--accent), transparent 88%), transparent 42%),
+    var(--bg-base);
+  box-shadow: 0 28px 120px rgba(0, 0, 0, 0.54);
+}
+
+.world-coverage-map-shell.is-zoomed .world-coverage-map {
+  cursor: grab;
+}
+
+.world-coverage-map-shell.is-dragging .world-coverage-map {
+  cursor: grabbing;
+}
+
+.world-coverage-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  color: var(--map-ink);
+  user-select: none;
+}
+
+.world-coverage-ocean {
+  fill: color-mix(in oklab, var(--bg-inset), var(--accent) 4%);
+}
+
+.world-coverage-grid {
+  color: var(--map-ink);
+  opacity: 0.35;
+}
+
+.world-coverage-meridian,
+.world-coverage-parallel {
+  stroke: var(--map-ink);
+  stroke-dasharray: 3 8;
+  stroke-width: 0.65;
+  vector-effect: non-scaling-stroke;
+}
+
+.world-coverage-parallel:nth-of-type(3) {
+  stroke: var(--map-ink-strong);
+}
+
+.world-coverage-country {
+  fill: color-mix(in oklab, var(--ink-3), transparent 82%);
+  stroke: color-mix(in oklab, var(--ink-2), transparent 68%);
+  stroke-width: 0.55;
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: fill 160ms ease, stroke 160ms ease, transform 160ms ease, filter 160ms ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.world-coverage-country.is-visited {
+  fill: color-mix(in oklab, var(--accent), transparent 46%);
+  stroke: color-mix(in oklab, var(--accent), var(--ink) 22%);
+}
+
+.world-coverage-country:hover {
+  fill: color-mix(in oklab, var(--accent), transparent 34%);
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.28));
+  stroke: color-mix(in oklab, var(--accent), var(--ink) 12%);
+  stroke-width: 1.2;
+  transform: scale(1.07);
+}
+
+.world-coverage-country:focus-visible {
+  outline: none;
+  fill: color-mix(in oklab, var(--accent), transparent 34%);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  transform: scale(1.07);
+}
+
+.world-coverage-labels {
+  fill: color-mix(in oklab, var(--ink-2), transparent 20%);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0;
+  opacity: 0.62;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+.world-coverage-pin-halo {
+  fill: var(--accent);
+  fill-opacity: 0.2;
+}
+
+.world-coverage-pin-ring {
+  fill: var(--bg-base);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.world-coverage-pin {
+  fill: var(--accent);
+}
+
+.world-coverage-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--bg-card), transparent 8%);
+  backdrop-filter: blur(8px);
+}
+
+.world-coverage-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg-inset);
+  color: var(--ink-2);
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.world-coverage-controls button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--accent), transparent 35%);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.world-coverage-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.world-coverage-zoom-readout {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--bg-card), transparent 8%);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}
+
+.world-coverage-country-readout {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: grid;
+  min-width: min(220px, calc(100% - 92px));
+  max-width: calc(100% - 92px);
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--bg-card), transparent 8%);
+  color: var(--ink-2);
+  backdrop-filter: blur(8px);
+}
+
+.world-coverage-country-readout span,
+.world-coverage-country-readout em {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.world-coverage-country-readout strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .world-coverage-map-shell.is-fullscreen {
+    inset: 0;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .world-coverage-controls {
+    top: 8px;
+    right: 8px;
+    gap: 4px;
+  }
+
+  .world-coverage-controls button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .world-coverage-country-readout {
+    right: 8px;
+    bottom: 44px;
+    left: 8px;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .world-coverage-zoom-readout {
+    right: 8px;
+    bottom: 8px;
+  }
+}
+
+.world-coverage-empty {
+  position: absolute;
+  inset: auto 16px 16px 16px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--bg-card), transparent 9%);
+  color: var(--ink-3);
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.mini-panel {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+}
+
+.coverage-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-inset);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.career-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.career-detail {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.achievement-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--bg-inset), transparent 18%);
+}
+
+.achievement-card.is-earned {
+  border-color: color-mix(in oklab, var(--accent), transparent 44%);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--accent), transparent 88%), transparent 48%),
+    var(--bg-inset);
+}
+
+.achievement-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--ink-3);
+}
+
+.achievement-card.is-earned .achievement-mark {
+  border-color: color-mix(in oklab, var(--accent), transparent 44%);
+  color: var(--accent);
+}
+
+.achievement-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--ink), transparent 90%);
+}
+
+.achievement-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
 .atlas-stat-value {
   color: var(--ink);
   font-size: 36px;

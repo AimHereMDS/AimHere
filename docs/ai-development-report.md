@@ -4,7 +4,7 @@
 
 AIm Here was developed as an AI-assisted software project: the team used AI both as a development tool and as part of the application functionality. At the beginning of the project, Claude was used to choose and refine the application idea so that it would satisfy the project requirements, including the requirement for AI agents, testing, source control, backlog, and demo deliverables. Claude was also used to break the idea into initial development tasks.
 
-After that planning step, the team copied the task-generation prompt produced by Claude and used it in the Claude browser extension in Chrome, so Claude could add the initial work items directly to Jira. The application itself contains runtime AI agents for location curation, visual hints, and PvE opponent guesses, while external AI tools were used during implementation, debugging, test generation, backlog management, and review cleanup.
+After that planning step, the team copied the task-generation prompt produced by Claude and used it in the Claude browser extension in Chrome, so Claude could add the initial work items directly to Jira. Later, Claude Design was used to explore the modern Atlas visual direction for the application redesign before the implementation was adapted into the real React codebase. The application itself contains runtime AI agents for location curation, visual hints, and PvE opponent guesses, while external AI tools were used during implementation, debugging, design exploration, test generation, backlog management, and review cleanup.
 
 The goal of using AI during development was not to replace the normal software process, but to speed up implementation while keeping the final code reviewable, testable, and under source control. Generated or suggested code was still checked locally through tests, frontend builds, Git diffs, and pull requests.
 
@@ -12,6 +12,7 @@ The goal of using AI during development was not to replace the normal software p
 
 - Claude was used at the start of the project to define the application idea, check it against the grading requirements, and generate the initial task/backlog structure.
 - The Claude browser extension in Chrome was used to take the generated Jira-task prompt and add the initial tasks directly into the Jira board.
+- Claude Design was used for the frontend redesign exploration, especially the Atlas direction: a modern cartographic interface with map textures, route-log styling, country/continent coverage visuals, and a game-specific visual identity.
 - Codex and Claude Code were used as implementation assistants for code generation, refactoring, test updates, debugging, and repo operations.
 - Claude Code was useful for local coding sessions where the task was mostly implementation-focused, such as generating first versions of features, adjusting existing files, and checking errors against the surrounding code.
 - Codex was used for later repo-level work: inspecting the real checkout, running tests and builds, editing documentation, creating diagrams and demo artifacts, configuring deployment, working with GitHub, and verifying the live Render deployment.
@@ -28,6 +29,7 @@ AI was used in several concrete development workflows:
 - Choosing the project idea and validating that it could cover the required features, AI-agent requirement, backlog, tests, CI, and demo.
 - Creating the first backlog/task breakdown from the selected idea.
 - Adding the initial generated tasks to Jira through the Claude browser extension in Chrome.
+- Exploring the Atlas visual overhaul with Claude Design, then translating that design direction into the real React, TypeScript, and CSS implementation.
 - Implementing user-facing flows such as authentication, game setup, Street View gameplay, round results, profile stats, and leaderboard views.
 - Designing and implementing the three application AI agents.
 - Creating typed frontend clients that call backend endpoints instead of exposing provider keys in the browser.
@@ -70,6 +72,14 @@ Fix the map feedback after submit so the player's guess, the real location, the 
 Check the open Jira issues for the AH project, then implement only the current open items and mark them done after verification.
 ```
 
+Claude Design prompt pattern:
+
+```text
+Read the attached project context and redesign the app in an Atlas direction.
+The result should be modern and appropriate for a geography guessing game, connected to the planet/map theme, and should avoid the generic AI-generated SaaS look.
+Keep the existing app pages in mind: home, setup, gameplay, results, leaderboard, profile, auth, and reusable map/profile components.
+```
+
 Curator Agent runtime prompt pattern:
 
 ```text
@@ -101,6 +111,7 @@ The explanation must cite visible clues and uncertainty, not metadata or hidden 
 - Backend FastAPI routers for games, location curation, hint generation, opponent guesses, auth, and leaderboard.
 - SQLAlchemy models for users, games, rounds, and scores.
 - Frontend React pages for setup, gameplay, results, profile, and leaderboard.
+- Atlas-direction frontend redesign, including the home/profile visual system, reusable country-level world coverage map, achievements, and career-stat UI.
 - Google Maps and Street View integration components.
 - Typed frontend agent clients that call backend endpoints instead of holding provider API keys in the browser.
 - Evaluation tests for curator region matching, progressive hints, visual prompt privacy, opponent difficulty behavior, and fixed-set opponent score trends.

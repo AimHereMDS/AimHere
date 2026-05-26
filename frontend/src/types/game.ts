@@ -69,6 +69,52 @@ export type Hint = {
   max_score_multiplier: number;
 };
 
+export type CoveragePoint = {
+  lat: number;
+  lng: number;
+  label?: string | null;
+  score: number;
+  distance_km: number;
+  hint_count: number;
+  game_id: string;
+  round_index: number;
+  played_at?: string | null;
+};
+
+export type WorldCoverage = {
+  points: CoveragePoint[];
+  routes: number;
+  total_score: number;
+  latest_played_at?: string | null;
+};
+
+export type CareerStats = {
+  rounds_played: number;
+  best_round_score: number;
+  average_round_score: number;
+  average_distance_km?: number | null;
+  closest_guess_km?: number | null;
+  sub_1km_guesses: number;
+  sub_10km_guesses: number;
+  near_perfect_rounds: number;
+  hints_used: number;
+  average_hints_per_game: number;
+  no_hint_games: number;
+  pve_wins: number;
+  pve_losses: number;
+  pve_draws: number;
+};
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  earned: boolean;
+  progress: number;
+  goal: number;
+  category: string;
+};
+
 export type Profile = {
   id: string;
   email: string;
@@ -80,4 +126,7 @@ export type Profile = {
   current_streak: number;
   best_streak: number;
   average_score: number;
+  career_stats?: CareerStats;
+  world_coverage?: WorldCoverage;
+  achievements?: Achievement[];
 };

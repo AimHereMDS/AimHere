@@ -85,6 +85,52 @@ class HintResponse(BaseModel):
     max_score_multiplier: float
 
 
+class CoveragePoint(BaseModel):
+    lat: float
+    lng: float
+    label: str | None = None
+    score: int
+    distance_km: float
+    hint_count: int
+    game_id: str
+    round_index: int
+    played_at: datetime | None = None
+
+
+class WorldCoverage(BaseModel):
+    points: list[CoveragePoint] = Field(default_factory=list)
+    routes: int = 0
+    total_score: int = 0
+    latest_played_at: datetime | None = None
+
+
+class CareerStats(BaseModel):
+    rounds_played: int = 0
+    best_round_score: int = 0
+    average_round_score: float = 0.0
+    average_distance_km: float | None = None
+    closest_guess_km: float | None = None
+    sub_1km_guesses: int = 0
+    sub_10km_guesses: int = 0
+    near_perfect_rounds: int = 0
+    hints_used: int = 0
+    average_hints_per_game: float = 0.0
+    no_hint_games: int = 0
+    pve_wins: int = 0
+    pve_losses: int = 0
+    pve_draws: int = 0
+
+
+class AchievementOut(BaseModel):
+    id: str
+    title: str
+    description: str
+    earned: bool
+    progress: float
+    goal: float
+    category: str
+
+
 class UserProfileOut(BaseModel):
     id: str
     email: EmailStr
@@ -96,6 +142,9 @@ class UserProfileOut(BaseModel):
     current_streak: int
     best_streak: int
     average_score: float
+    career_stats: CareerStats = Field(default_factory=CareerStats)
+    world_coverage: WorldCoverage = Field(default_factory=WorldCoverage)
+    achievements: list[AchievementOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
