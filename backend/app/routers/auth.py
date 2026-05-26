@@ -149,7 +149,7 @@ def build_profile_response(user: UserProfile, db: Session) -> UserProfileOut:
         career_stats=career_stats,
         world_coverage=WorldCoverage(
             points=coverage_points,
-            routes=len(coverage_points),
+            routes=len(completed_games),
             total_score=sum(scores),
             latest_played_at=latest_played_at,
         ),

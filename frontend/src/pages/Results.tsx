@@ -22,7 +22,10 @@ export function Results() {
   const playerWon = isPve && score > aiScore;
   const averageDistance =
     game.rounds.length > 0 ? game.rounds.reduce((sum, round) => sum + round.result.distance_km, 0) / game.rounds.length : 0;
-  const bestRound = [...game.rounds].sort((a, b) => b.result.score - a.result.score)[0];
+  const bestRound = game.rounds.reduce<PlayedRound | null>(
+    (best, round) => (!best || round.result.score > best.result.score ? round : best),
+    null,
+  );
   const hintsUsed = game.rounds.reduce((sum, round) => sum + round.hintsUsed, 0);
 
   return (

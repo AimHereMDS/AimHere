@@ -221,7 +221,7 @@ def test_me_endpoint_includes_real_career_and_coverage_stats(client, db):
     assert data["career_stats"]["closest_guess_km"] == 0.7
     assert data["career_stats"]["sub_1km_guesses"] == 1
     assert data["career_stats"]["pve_wins"] == 1
-    assert data["world_coverage"]["routes"] == 2
+    assert data["world_coverage"]["routes"] == 1
     assert data["world_coverage"]["points"][0]["score"] in {4998, 3602}
     achievements = {achievement["id"]: achievement for achievement in data["achievements"]}
     assert achievements["first-fix"]["earned"] is True

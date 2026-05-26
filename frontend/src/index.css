@@ -36,6 +36,8 @@
   --radius: 10px;
   --radius-lg: 14px;
   --radius-xl: 22px;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", "Cascadia Mono", "Liberation Mono", Menlo, Consolas, ui-monospace, monospace;
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 16px 40px -20px rgba(0, 0, 0, 0.7);
   --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 24px 60px -24px rgba(0, 0, 0, 0.85);
   color: var(--ink);
@@ -180,13 +182,13 @@ button {
 }
 
 .serif {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-weight: 400;
   letter-spacing: -0.01em;
 }
 
 .mono {
-  font-family: "SFMono-Regular", "Cascadia Mono", "Liberation Mono", Menlo, Consolas, ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

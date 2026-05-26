@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Maximize2, Minimize2, Minus, Plus, RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent, type WheelEvent } from "react";
 
 import { WORLD_COUNTRIES, type WorldCountry } from "../../data/worldCountries";
 import type { CoveragePoint } from "../../types/game";
@@ -44,6 +44,7 @@ const COUNTRY_PATHS: CountryPath[] = WORLD_COUNTRIES.map((country) => ({
   country,
   path: country.polygons.map((polygon) => polygon.map(ringToPath).join(" ")).join(" "),
 }));
+const countryLookupCache = new Map<string, WorldCountry | undefined>();
 
 function project(lng: number, lat: number) {
   return {
@@ -87,10 +88,14 @@ function pointInPolygon(lng: number, lat: number, polygon: number[][][]) {
 }
 
 export function findCountryForCoordinate(lat: number, lng: number) {
-  return WORLD_COUNTRIES.find((country) => (
-    isInsideBBox(country, lat, lng)
-    && country.polygons.some((polygon) => pointInPolygon(lng, lat, polygon))
+  const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  if (countryLookupCache.has(cacheKey)) return countryLookupCache.get(cacheKey);
+  const country = WORLD_COUNTRIES.find((candidate) => (
+    isInsideBBox(candidate, lat, lng)
+    && candidate.polygons.some((polygon) => pointInPolygon(lng, lat, polygon))
   ));
+  countryLookupCache.set(cacheKey, country);
+  return country;
 }
 
 export function getCoverageSummary(points: Point[]) {
@@ -212,6 +217,16 @@ export function WorldCoverageMap({
     }
   }
 
+  function selectCountry(country: WorldCountry) {
+    setHoveredCountry(country);
+  }
+
+  function handleCountryKeyDown(event: ReactKeyboardEvent<SVGPathElement>, country: WorldCountry) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    selectCountry(country);
+  }
+
   return (
     <div
       className={`world-coverage-map-shell ${zoomed ? "is-zoomed" : ""} ${drag ? "is-dragging" : ""} ${fullscreen ? "is-fullscreen" : ""} ${className}`}
@@ -249,11 +264,14 @@ export function WorldCoverageMap({
                 className={visitedCountries.has(country.id) ? "world-coverage-country is-visited" : "world-coverage-country"}
                 d={path}
                 key={country.id}
+                aria-label={`${country.name}, ${country.continent}`}
                 onBlur={() => setHoveredCountry(null)}
-                onClick={() => setHoveredCountry(country)}
-                onFocus={() => setHoveredCountry(country)}
-                onPointerEnter={() => setHoveredCountry(country)}
+                onClick={() => selectCountry(country)}
+                onFocus={() => selectCountry(country)}
+                onKeyDown={(event) => handleCountryKeyDown(event, country)}
+                onPointerEnter={() => selectCountry(country)}
                 onPointerLeave={() => setHoveredCountry(null)}
+                role="button"
                 tabIndex={0}
               >
                 <title>{country.name}</title>
@@ -292,17 +310,18 @@ export function WorldCoverageMap({
         {hoveredCountry && <em>{hoveredCountry.continent}</em>}
       </div>
       {interactive && (
-        <div aria-label="Map zoom controls" className="world-coverage-controls">
-          <button disabled={zoom <= MIN_ZOOM} onClick={() => setZoomLevel(zoom - ZOOM_STEP)} title="Zoom out" type="button">
+        <div aria-label="Map zoom controls" className="world-coverage-controls" role="group">
+          <button aria-label="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => setZoomLevel(zoom - ZOOM_STEP)} title="Zoom out" type="button">
             <Minus size={15} />
           </button>
-          <button disabled={zoom >= MAX_ZOOM} onClick={() => setZoomLevel(zoom + ZOOM_STEP)} title="Zoom in" type="button">
+          <button aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => setZoomLevel(zoom + ZOOM_STEP)} title="Zoom in" type="button">
             <Plus size={15} />
           </button>
-          <button disabled={!zoomed} onClick={() => setZoomLevel(MIN_ZOOM)} title="Reset map" type="button">
+          <button aria-label="Reset map" disabled={!zoomed} onClick={() => setZoomLevel(MIN_ZOOM)} title="Reset map" type="button">
             <RotateCcw size={14} />
           </button>
           <button
+            aria-label={showPins ? "Hide pins" : "Show pins"}
             aria-pressed={!showPins}
             onClick={() => setShowPins((current) => !current)}
             title={showPins ? "Hide pins" : "Show pins"}
@@ -311,6 +330,7 @@ export function WorldCoverageMap({
             {showPins ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
           <button
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen map"}
             aria-pressed={fullscreen}
             onClick={() => setFullscreen((current) => !current)}
             title={fullscreen ? "Exit fullscreen" : "Fullscreen map"}
