@@ -1,6 +1,9 @@
-import { Bot, Brain, Compass, Globe2, MapPinned, PlayCircle, Sparkles, Target, Trophy } from "lucide-react";
+import { Bot, Brain, Globe2, MapPinned, PlayCircle, RotateCcw, Settings2, Target, Trophy } from "lucide-react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
+import { AtlasStat, CompassRose } from "../components/Atlas/Atlas";
+import { getCoverageSummary, SAMPLE_COVERAGE_POINTS, WorldCoverageMap } from "../components/Atlas/WorldCoverageMap";
 import { AuthCard } from "../components/Auth/AuthCard";
 import { useAuth } from "../hooks/useAuth";
 import type { ActiveGame } from "../types/game";
@@ -13,127 +16,227 @@ function activeGame(): ActiveGame | null {
 export function Home() {
   const { user } = useAuth();
   const savedGame = user ? activeGame() : null;
+  const userCoveragePoints = user?.world_coverage?.points ?? [];
+  const homeMapPoints = userCoveragePoints.length > 0 ? userCoveragePoints : SAMPLE_COVERAGE_POINTS;
+  const userCoverage = useMemo(() => getCoverageSummary(userCoveragePoints), [userCoveragePoints]);
+
   return (
     <main className="app-shell">
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 map-bg" />
-        <div className="absolute inset-0 grid-bg opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_78%)]" />
-        <div className="mx-auto grid min-h-[calc(100vh-72px)] max-w-6xl items-center gap-10 px-4 py-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="relative">
-            <div className="chip mb-5">
-              <Sparkles size={14} />
-              AI-powered geo battles
+      <div className="atlas-page">
+        <section className="grid items-start gap-14 pt-8 lg:grid-cols-[1.12fr_0.88fr]">
+          <div>
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <span className="eyebrow">Logged on · Earth route active</span>
+              <span className="hidden h-px w-9 bg-[var(--line-strong)] sm:block" />
+              <span className="eyebrow">5 rounds · live street view · AI rival</span>
             </div>
-            <h1 className="max-w-3xl text-5xl font-black uppercase leading-[0.96] tracking-tight text-white md:text-7xl">
-              Explore.
+
+            <h1 className="serif atlas-hero-title">
+              Drop in.
               <br />
-              Guess.
+              Read the world.
               <br />
-              <span className="text-teal-300">Outscore.</span>
+              <em>Outguess the AI.</em>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Drop into live Street View, read the scene, place your pin, ask for progressive hints, and
-              challenge an AI opponent over five fast rounds.
+
+            <p className="atlas-copy mt-6 max-w-xl">
+              A geographic guessing game played on the real planet. Five panoramas, five pins, and an
+              optional AI rival trying to read the same streets, signs, roads, and landscapes.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link className="btn-gg" to={user ? "/setup" : "/#auth"}>
-                <MapPinned size={19} strokeWidth={3} />
-                Play now
+                <MapPinned size={18} />
+                {savedGame ? "Resume match" : "Start a match"}
               </Link>
               <Link className="btn-secondary" to="/leaderboard">
-                <Trophy size={19} />
+                <Trophy size={18} />
                 Leaderboard
               </Link>
             </div>
-            <div className="mt-12 grid max-w-xl grid-cols-3 overflow-hidden rounded-lg border border-white/10 bg-white/10">
-              <Stat label="Rounds" value="5" />
-              <Stat label="Max score" value="25K" />
-              <Stat label="Agents" value="3" />
+
+            {user && savedGame && savedGame.rounds.length < 5 && (
+              <Link className="surface mt-7 flex max-w-xl items-center gap-4 p-4" to={`/game/${savedGame.id}`}>
+                <span className="chip chip-accent">
+                  <RotateCcw size={12} />
+                  Saved match
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="serif block text-lg leading-tight text-[var(--ink)]">
+                    Round {savedGame.rounds.length + 1} of 5
+                  </span>
+                  <span className="mono block text-xs tracking-[0.08em] text-[var(--ink-3)]">
+                    {savedGame.mode === "pve" ? "PvE route" : "Solo route"} · resume field log
+                  </span>
+                </span>
+                <PlayCircle className="text-[var(--accent)]" size={19} />
+              </Link>
+            )}
+
+            <div className="mt-9 grid max-w-2xl grid-cols-2 gap-6 border-t border-[var(--line)] pt-6 md:grid-cols-4">
+              <AtlasStat label="Rounds per match" value="5" />
+              <AtlasStat label="Max score" value="25K" />
+              <AtlasStat hint="curator · hint · rival" label="AI agents" value="3" />
+              <AtlasStat hint="real Street View" label="Locations" value="∞" />
             </div>
           </div>
-          <div className="relative" id="auth">
+
+          <div className="flex flex-col gap-6" id="auth">
+            <div className="atlas-home-globe">
+              <div className="atlas-home-globe-grid" />
+              <div className="atlas-home-globe-inner">
+                <CompassRose size={220} spin />
+              </div>
+              <div className="absolute bottom-5 left-5 flex flex-col gap-1 text-[10px] uppercase tracking-[0.13em] text-[var(--ink-3)]">
+                <span className="mono">LAT 48.8566</span>
+                <span className="mono">LON 2.3522</span>
+                <span className="mono">RES +/- 2.4m</span>
+              </div>
+              <span className="atlas-home-pin left-[28%] top-[32%]" />
+              <span className="atlas-home-pin left-[62%] top-[58%] [animation-delay:0.8s]" />
+              <span className="atlas-home-pin left-[70%] top-[22%] [animation-delay:1.6s]" />
+            </div>
+
             {user ? (
-              <div className="panel p-6">
-                <div className="chip chip-amber mb-4">
-                  <Compass size={14} />
-                  Signed in
-                </div>
-                <h2 className="text-2xl font-black text-white">Ready for a new match</h2>
-                <p className="mt-2 text-slate-300">{user.email}</p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <Link className="btn-gg px-4 py-3 text-sm" to="/setup">
-                    New match
-                  </Link>
-                  <Link className="btn-secondary px-4 py-3 text-sm" to="/profile">
+              <div className="surface p-5">
+                <div className="flex items-center gap-3 border-b border-dashed border-[var(--line)] pb-4">
+                  <div className="serif flex h-11 w-11 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--accent),transparent_65%)] bg-[var(--accent-soft)] text-2xl text-[var(--accent)]">
+                    {user.email.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="eyebrow">Signed in</div>
+                    <div className="serif truncate text-lg text-[var(--ink)]">{user.email.split("@")[0]}</div>
+                  </div>
+                  <Link className="btn-secondary btn-sm ml-auto" to="/profile">
                     Profile
                   </Link>
                 </div>
-                {savedGame && savedGame.rounds.length < 5 && (
-                  <Link
-                    className="mt-4 flex items-center justify-between rounded-md border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:border-amber-200/70 hover:bg-amber-300/15"
-                    to={`/game/${savedGame.id}`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <PlayCircle size={17} />
-                      Resume saved match
-                    </span>
-                    <span>{savedGame.rounds.length}/5</span>
-                  </Link>
-                )}
+                <div className="mt-4 grid grid-cols-4 gap-3">
+                  <MiniStat label="Best" value={user.best_score.toLocaleString()} />
+                  <MiniStat label="Avg" value={Math.round(user.average_score).toLocaleString()} />
+                  <MiniStat label="Games" value={user.games_played.toLocaleString()} />
+                  <MiniStat label="Countries" value={userCoverage.countries.length.toLocaleString()} />
+                </div>
               </div>
             ) : (
               <AuthCard />
             )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14">
-        <div className="mb-8">
-          <div className="chip chip-amber mb-3">The game</div>
-          <h2 className="text-3xl font-black text-white md:text-4xl">A sharper Street View challenge</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            { icon: Globe2, title: "Live panoramas", text: "Runtime locations are snapped toward playable public Street View coverage." },
-            { icon: Brain, title: "Agent help", text: "Curator selects themes, Hint gives staged clues, Opponent plays PvE after your guess." },
-            { icon: Target, title: "Custom rules", text: "Rotation-only, limited steps, free movement, timers, and easy to hard AI difficulty." },
-          ].map((item) => (
-            <div className="panel p-5" key={item.title}>
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-md border border-teal-300/35 bg-teal-300/10 text-teal-200">
-                <item.icon size={22} />
-              </div>
-              <h3 className="text-lg font-black uppercase tracking-tight text-white">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-300">{item.text}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 panel p-6">
-          <div className="grid gap-5 md:grid-cols-4">
-            {[
-              { icon: Bot, title: "Pick mode", text: "Solo or PvE." },
-              { icon: Globe2, title: "Look around", text: "Read signs and roads." },
-              { icon: MapPinned, title: "Drop pin", text: "Commit your guess." },
-              { icon: Trophy, title: "Score", text: "Five rounds to climb." },
-            ].map((step) => (
-              <div key={step.title}>
-                <step.icon className="mb-3 text-amber-300" size={24} />
-                <div className="font-black uppercase tracking-tight text-white">{step.title}</div>
-                <div className="mt-1 text-sm text-slate-400">{step.text}</div>
-              </div>
-            ))}
+        <section className="mt-24 border-t border-[var(--line)] pt-14">
+          <div className="mb-8 max-w-3xl">
+            <span className="chip chip-accent">The game</span>
+            <h2 className="serif mt-4 text-5xl leading-none text-[var(--ink)] md:text-6xl">
+              A sharper Street View challenge.
+            </h2>
+            <p className="atlas-copy mt-4">
+              Three AI agents shape the match. The Curator picks the route, the Hint Guide drops staged
+              clues, and the Rival fights for your points in PvE.
+            </p>
           </div>
-        </div>
-      </section>
+
+          <div className="atlas-card-grid">
+            <FeatureCard
+              icon={<Globe2 size={19} />}
+              num="01"
+              text="Real Street View coverage. Runtime coordinates are snapped toward playable public panoramas."
+              title="Live panoramas"
+            />
+            <FeatureCard
+              icon={<Brain size={19} />}
+              num="02"
+              text="The Hint Guide reads visible clues from the current frame and gives progressively stronger help."
+              title="Staged hints"
+            />
+            <FeatureCard
+              icon={<Bot size={19} />}
+              num="03"
+              text="Solo for personal bests or PvE, where the Rival places a guess after your pin lands."
+              title="AI rival"
+            />
+            <FeatureCard
+              icon={<Settings2 size={19} />}
+              num="04"
+              text="Rotation only, limited movement, free roaming, custom filters, and timer rules."
+              title="Set the rules"
+            />
+          </div>
+        </section>
+
+        <section className="atlas-loop">
+          <LoopStep label="Pick mode" num="01" sub="Solo · PvE" />
+          <LoopStep label="Set rules" num="02" sub="Locations · timer" />
+          <LoopStep label="Look around" num="03" sub="Read signs and roads" />
+          <LoopStep label="Drop pin" num="04" sub="Commit guess" />
+          <LoopStep label="Score" num="05" sub="Climb 25,000" />
+        </section>
+
+        <section className="surface mt-10 overflow-hidden p-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+            <div className="world-coverage-frame min-h-64">
+              <WorldCoverageMap points={homeMapPoints} />
+            </div>
+            <div className="flex flex-col justify-center p-3">
+              <span className="eyebrow">Field atlas</span>
+              <h3 className="serif mt-2 text-3xl leading-tight text-[var(--ink)]">Every round leaves a mark.</h3>
+              <p className="atlas-muted mt-3 text-sm leading-6">
+                Country borders, continent labels, route pins, and score history give each match a place in
+                the same atlas you carry into your profile.
+              </p>
+              <Link className="btn-secondary mt-5 self-start" to="/setup">
+                <Target size={16} />
+                Plan route
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-r border-white/10 px-4 py-4 last:border-r-0">
-      <div className="text-3xl font-black text-teal-300">{value}</div>
-      <div className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</div>
+    <div>
+      <div className="eyebrow">{label}</div>
+      <div className="mono mt-1 text-lg text-[var(--ink)]">{value}</div>
+    </div>
+  );
+}
+
+function FeatureCard({
+  num,
+  icon,
+  title,
+  text,
+}: {
+  num: string;
+  icon: JSX.Element;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="surface atlas-feature-card">
+      <div className="atlas-feature-head">
+        <span className="atlas-feature-icon">{icon}</span>
+        <span className="mono text-xs tracking-[0.1em] text-[var(--ink-4)]">{num}</span>
+      </div>
+      <div className="serif atlas-feature-title">{title}</div>
+      <p className="atlas-feature-text">{text}</p>
+    </div>
+  );
+}
+
+function LoopStep({ num, label, sub }: { num: string; label: string; sub: string }) {
+  return (
+    <div className="atlas-loop-step">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="mono text-xs tracking-[0.12em] text-[var(--ink-4)]">{num}</span>
+        <span className="atlas-loop-rule" />
+      </div>
+      <div className="serif text-lg text-[var(--ink)]">{label}</div>
+      <div className="mt-1 text-xs text-[var(--ink-3)]">{sub}</div>
     </div>
   );
 }

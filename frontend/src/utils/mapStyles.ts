@@ -23,17 +23,17 @@ export function pinIcon(fillColor: string, strokeColor: string, scale = 1): goog
 }
 
 export const darkMapStyles: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#334155" }] },
-  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#111827" }] },
+  { elementType: "geometry", stylers: [{ color: "#15212d" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a121b" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#d4c9ad" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#5a574d" }] },
+  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#1a2935" }] },
   { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#263747" }] },
   { featureType: "road", elementType: "labels", stylers: [{ visibility: "on" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#cbd5e1" }] },
-  { featureType: "road", elementType: "labels.text.stroke", stylers: [{ color: "#020617" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#f3ead6" }] },
+  { featureType: "road", elementType: "labels.text.stroke", stylers: [{ color: "#0a121b" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#020617" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0c151e" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#8b8473" }] },
 ];

@@ -1,9 +1,10 @@
-import { Bot, ChevronDown, Clock, DoorOpen, Flag, Lightbulb, MapPin, Trophy } from "lucide-react";
+import { Bot, ChevronDown, Clock, DoorOpen, Flag, Lightbulb, Trophy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { curateLocations } from "../agents/curatorAgent";
 import { submitPveRound } from "../agents/opponentAgent";
+import { AtlasLogo, CompassRose } from "../components/Atlas/Atlas";
 import { HintPanel } from "../components/HintPanel/HintPanel";
 import { GuessMap } from "../components/Map/GuessMap";
 import { ScoreBoard } from "../components/ScoreBoard/ScoreBoard";
@@ -184,11 +185,11 @@ export function Game() {
   if (!game || !current) return null;
 
   return (
-    <main className="relative h-[calc(100vh-72px)] overflow-hidden bg-black">
+    <main className="atlas-game-root">
       <div className="absolute inset-0">
         <StreetViewPanorama
           key={`${game.id}-${roundIndex}-${current.lat},${current.lng}`}
-          className="relative h-full overflow-hidden bg-slate-200"
+          className="relative h-full overflow-hidden bg-black"
           location={current}
           movementLimit={game.setup.movement_limit}
           movementMode={game.setup.movement_mode}
@@ -197,14 +198,33 @@ export function Game() {
         />
       </div>
 
-      <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-4">
-        <div className="panel-soft pointer-events-auto px-4 py-3 text-white">
-          <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Round {roundIndex} / 5</div>
-          <p className="mt-1 text-sm text-white/75">
-            {game.mode === "pve" ? "PvE match" : "Solo match"} / {game.setup.movement_mode} movement
-          </p>
+      <div className="hud-top pointer-events-none">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-3">
+          <button className="hud-glass flex h-10 w-10 items-center justify-center p-0" onClick={saveAndExit} title="Save and exit" type="button">
+            <AtlasLogo size={22} />
+          </button>
+          <div className="hud-glass flex items-center gap-3 px-4 py-2">
+            <span className="eyebrow text-[9.5px]">Round</span>
+            <div className="hud-round-dots">
+              {[1, 2, 3, 4, 5].map((round) => (
+                <span
+                  className={`hud-round-dot ${round === roundIndex ? "is-now" : round < roundIndex ? "is-done" : ""}`}
+                  key={round}
+                />
+              ))}
+            </div>
+            <span className="mono text-xs tracking-[0.1em] text-[var(--accent)]">
+              {String(roundIndex).padStart(2, "0")}/05
+            </span>
+          </div>
+          <div className="hud-glass hidden flex-col px-3 py-2 md:flex">
+            <span className="eyebrow text-[9px]">Mode</span>
+            <span className="mono text-xs text-[var(--ink)]">
+              {game.mode === "pve" ? "VS AI" : "Solo"} · {game.setup.movement_mode}
+            </span>
+          </div>
           <button
-            className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-xs font-black text-slate-200 transition hover:border-teal-300/50 hover:text-teal-200"
+            className="hud-glass inline-flex items-center gap-1.5 px-3 py-2 text-xs text-[var(--ink-2)] transition hover:text-[var(--ink)]"
             onClick={saveAndExit}
             type="button"
           >
@@ -212,41 +232,135 @@ export function Game() {
             Save & exit
           </button>
         </div>
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2">
           {secondsLeft !== null && (
-            <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 font-black backdrop-blur-sm ${secondsLeft <= 10 ? "border-red-400/50 bg-red-600/70 text-white" : "border-white/10 bg-black/55 text-white"}`}>
+            <div className={`hud-glass flex items-center gap-2 px-3 py-2 font-semibold ${secondsLeft <= 10 ? "border-[var(--neg)] text-[var(--neg)]" : ""}`}>
               <Clock size={18} />
-              {secondsLeft}s
+              <span className="mono">{secondsLeft}s</span>
             </div>
           )}
           {game.mode === "pve" && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 font-black text-amber-200 backdrop-blur-sm">
+            <div className="hud-glass flex items-center gap-2 px-3 py-2 font-semibold text-[var(--ai)]">
               <Bot size={18} />
-              AI {game.rounds.reduce((sum, round) => sum + (round.result.ai_score ?? 0), 0).toLocaleString()}
+              <span className="mono">AI {game.rounds.reduce((sum, round) => sum + (round.result.ai_score ?? 0), 0).toLocaleString()}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/55 px-3 py-2 font-black text-white backdrop-blur-sm">
+          <div className="hud-glass flex items-center gap-2 px-3 py-2 font-semibold">
             <Trophy size={18} />
-            {totalScore(game.rounds).toLocaleString()} pts
+            <span className="mono">{totalScore(game.rounds).toLocaleString()}</span>
+            <span className="eyebrow text-[9px]">pts</span>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-3 w-72">
-        <ScoreBoard rounds={game.rounds} />
+      <div className="hud-coord-strip mono">
+        <span>FRAME · 0{roundIndex}1</span>
+        <span>·</span>
+        <span>BEARING {Math.round(panoramaView?.heading ?? 0).toString().padStart(3, "0")}</span>
+        <span>·</span>
+        <span>FOV {Math.round(panoramaView?.fov ?? 90)}</span>
+      </div>
+
+      <div className="hud-left">
+        <div className="hud-glass hud-compass">
+          <CompassRose size={64} />
+        </div>
         <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
       </div>
 
-      <div className="absolute bottom-3 right-3 z-20 flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-4 sm:right-4 sm:max-w-[calc(100vw-2rem)]">
-        {result && (
-          <div className="panel-soft flex min-h-0 w-full max-w-[440px] flex-col overflow-y-auto px-4 py-3 text-white max-h-[calc(100vh-480px)]">
-            <div className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">Your guess</div>
-            <h2 className="mt-1 text-2xl font-black">+{result.score.toLocaleString()}</h2>
-            <p className="text-sm text-white/70">{formatKm(result.distance_km)} away</p>
+      <div className="hud-rounds-summary">
+        <ScoreBoard rounds={game.rounds} />
+      </div>
+
+      <div className="hud-map">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="eyebrow text-[var(--accent)]">{guess ? "Pin placed" : "Drop your guess"}</span>
+            {guess && (
+              <div className="mono mt-1 text-xs text-[var(--ink-2)]">
+                {guess.lat.toFixed(3)}, {guess.lng.toFixed(3)}
+              </div>
+            )}
+          </div>
+          {result && <span className="mono text-sm text-[var(--accent)]">+{result.score.toLocaleString()}</span>}
+        </div>
+        {error && <div className="rounded-md border border-[color-mix(in_oklab,var(--neg),transparent_55%)] bg-[var(--neg-soft)] px-4 py-2 text-sm text-[var(--ink)]">{error}</div>}
+
+        <div
+          className={`hud-map-canvas transition-all duration-300 ${mapExpanded || roundComplete ? "h-[min(20rem,45vh)]" : "h-52"}`}
+          onMouseEnter={() => setMapExpanded(true)}
+          onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
+        >
+          <GuessMap
+            aiGuess={aiGuess}
+            distanceKm={result?.distance_km}
+            guess={guess}
+            locked={roundComplete}
+            onGuess={setGuess}
+            real={result ? current : undefined}
+          />
+        </div>
+
+        {!result ? (
+          <button
+            className="btn-gg w-full disabled:opacity-50"
+            disabled={!canSubmit || secondsLeft === 0}
+            onClick={submitRound}
+            type="button"
+          >
+            <Flag size={18} />
+            Submit guess
+          </button>
+        ) : (
+          <button
+            className="btn-gg w-full"
+            onClick={nextRound}
+            type="button"
+          >
+            {roundIndex >= 5 ? "View results" : "Next round"}
+          </button>
+        )}
+      </div>
+
+      {result && (
+        <div className="hud-result">
+          <div className="hud-result-card">
+            <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+              <div>
+                <span className="eyebrow">Round {roundIndex} · result</span>
+                <h2 className="serif mt-3 text-5xl leading-none text-[var(--ink)] md:text-6xl">
+                  {result.score >= 4000 ? "Pinpoint." : result.score >= 2500 ? "Solid read." : result.score >= 800 ? "Close-ish." : "Off the map."}
+                </h2>
+                <div className="mt-6 flex flex-wrap gap-8">
+                  <div>
+                    <div className="eyebrow">Distance</div>
+                    <div className="serif mt-1 text-5xl text-[var(--ink)]">
+                      {formatKm(result.distance_km)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="eyebrow">Earned</div>
+                    <div className="serif mt-1 text-5xl text-[var(--accent)]">
+                      {result.score.toLocaleString()}
+                    </div>
+                  </div>
+                  {result.ai_guess && (
+                    <div>
+                      <div className="eyebrow">AI rival</div>
+                      <div className="serif mt-1 text-5xl text-[var(--ai)]">
+                        {(result.ai_score ?? 0).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="min-h-0 overflow-y-auto rounded-md border border-[var(--line)] bg-[var(--bg-inset)] p-4">
+                <div className="eyebrow text-[var(--accent)]">Round notes</div>
+                <p className="mt-2 text-sm text-[var(--ink-2)]">{formatKm(result.distance_km)} away from the actual panorama.</p>
             {roundHints.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
                 <button
-                  className="flex w-full items-center justify-between gap-2 text-left text-sm font-black text-amber-200"
+                  className="flex w-full items-center justify-between gap-2 text-left text-sm font-semibold text-[var(--hint)]"
                   onClick={() => setShowHintLog((value) => !value)}
                   type="button"
                 >
@@ -262,8 +376,8 @@ export function Game() {
                 {showHintLog && (
                   <div className="mt-2 space-y-1.5">
                     {roundHints.map((hint) => (
-                      <p className="text-xs leading-5 text-white/65" key={hint.level}>
-                        <span className="font-black text-white/80">{hint.title}:</span> {hint.hint}
+                      <p className="text-xs leading-5 text-[var(--ink-3)]" key={hint.level}>
+                        <span className="font-semibold text-[var(--ink-2)]">{hint.title}:</span> {hint.hint}
                       </p>
                     ))}
                   </div>
@@ -272,18 +386,18 @@ export function Game() {
             )}
             {result.ai_guess && (
               <div className="mt-3 border-t border-white/10 pt-3">
-                <div className="flex items-center gap-2 text-sm font-black text-amber-200">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--ai)]">
                   <Bot size={16} />
                   AI +{(result.ai_score ?? 0).toLocaleString()} / {formatKm(result.ai_distance_km ?? 0)} away
                 </div>
                 <p
-                  className={`mt-1 text-xs leading-5 text-white/65 ${showFullReasoning ? "" : "line-clamp-2"}`}
+                  className={`mt-1 text-xs leading-5 text-[var(--ink-3)] ${showFullReasoning ? "" : "line-clamp-2"}`}
                 >
-                  <span className="font-bold text-slate-300">Reasoning:</span> {result.ai_guess.explanation}
+                  <span className="font-semibold text-[var(--ink-2)]">Reasoning:</span> {result.ai_guess.explanation}
                 </p>
                 {result.ai_guess.explanation.length > 140 && (
                   <button
-                    className="mt-1 text-xs font-black text-teal-300 hover:text-teal-200"
+                    className="mt-1 text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-hi)]"
                     onClick={() => setShowFullReasoning((value) => !value)}
                     type="button"
                   >
@@ -292,53 +406,16 @@ export function Game() {
                 )}
               </div>
             )}
-          </div>
-        )}
-        {error && <div className="max-w-[440px] rounded-md border border-red-400/40 bg-red-600/30 px-4 py-2 text-sm text-red-100 backdrop-blur">{error}</div>}
-
-        <div
-          className={`overflow-hidden rounded-xl border-2 border-white/25 shadow-2xl transition-all duration-300 ${mapExpanded || roundComplete ? "h-[min(20rem,45vh)] w-[min(27.5rem,calc(100vw-1.5rem))]" : "h-52 w-[min(18rem,calc(100vw-1.5rem))]"}`}
-          onMouseEnter={() => setMapExpanded(true)}
-          onMouseLeave={() => { if (!roundComplete && !guess) setMapExpanded(false); }}
-        >
-          <GuessMap
-            aiGuess={aiGuess}
-            distanceKm={result?.distance_km}
-            guess={guess}
-            locked={roundComplete}
-            onGuess={setGuess}
-            real={result ? current : undefined}
-          />
-        </div>
-
-        {!result ? (
-          <div className="flex items-center gap-2">
-            {guess && (
-              <div className="flex items-center gap-1 rounded-lg bg-black/60 px-3 py-2 text-sm text-white/80 backdrop-blur-sm">
-                <MapPin size={14} />
-                {guess.lat.toFixed(3)}, {guess.lng.toFixed(3)}
               </div>
-            )}
-            <button
-              className="flex items-center gap-2 rounded-lg bg-teal-400 px-4 py-2 font-black text-slate-950 shadow-lg disabled:opacity-50"
-              disabled={!canSubmit || secondsLeft === 0}
-              onClick={submitRound}
-              type="button"
-            >
-              <Flag size={18} />
-              Submit guess
-            </button>
+            </div>
+            <div className="mt-6 flex justify-end border-t border-dashed border-[var(--line)] pt-5">
+              <button className="btn-gg" onClick={nextRound} type="button">
+                {roundIndex >= 5 ? "View results" : "Next round"}
+              </button>
+            </div>
           </div>
-        ) : (
-          <button
-            className="rounded-lg bg-slate-950 px-5 py-3 font-black text-white shadow-lg ring-1 ring-white/10"
-            onClick={nextRound}
-            type="button"
-          >
-            {roundIndex >= 5 ? "View results" : "Next round"}
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -210,33 +210,33 @@ export function StreetViewPanorama({
     };
   }, [location.lat, location.lng, movementMode, movementLimit]);
 
-  const rootClassName = `${className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-slate-950"} street-view-shell`;
+  const rootClassName = `${className ?? "relative h-full min-h-[420px] overflow-hidden rounded-lg border border-[var(--line)] bg-black"} street-view-shell`;
 
   return (
     <div ref={rootRef} className={rootClassName}>
       <div ref={containerRef} className="h-full w-full" />
       <button
         aria-label={isFullscreen ? "Exit panorama fullscreen" : "Open panorama fullscreen"}
-        className="absolute left-1/2 top-4 z-20 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-md border border-white/15 bg-slate-950/80 text-white shadow-lg backdrop-blur transition hover:border-teal-300/60 hover:text-teal-200"
+        className="street-control-btn absolute left-1/2 top-4 z-20 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-md border shadow-lg backdrop-blur transition"
         onClick={toggleFullscreen}
         title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
         type="button"
       >
         {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
       </button>
-      <div className="absolute left-3 top-3 rounded-md border border-white/10 bg-slate-950/75 px-3 py-2 text-sm font-semibold text-white shadow backdrop-blur">
+      <div className="hud-glass absolute left-3 top-3 px-3 py-2 text-sm shadow">
         {movementMode === "rotation" && "Rotation only"}
         {movementMode === "limited" && `Limited movement: ${depth}/${movementLimit}`}
         {movementMode === "full" && "Full movement"}
       </div>
       {blocked && (
-        <div className="absolute bottom-3 left-3 right-3 rounded-md border border-amber-300/40 bg-amber-400/90 px-3 py-2 text-sm font-black text-slate-950 shadow">
+        <div className="absolute bottom-3 left-3 right-3 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--accent-ink)] shadow">
           Movement limit reached. The panorama was returned to the allowed route.
         </div>
       )}
       {unavailable && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-center text-sm font-black text-white">
-          <div className="rounded-md border border-white/10 bg-slate-900 px-4 py-3">
+        <div className="absolute inset-0 flex items-center justify-center bg-[rgba(10,18,27,0.82)] text-center text-sm font-semibold text-[var(--ink)]">
+          <div className="rounded-md border border-[var(--line)] bg-[var(--bg-card)] px-4 py-3">
             This Street View has no usable imagery. Loading another location…
           </div>
         </div>

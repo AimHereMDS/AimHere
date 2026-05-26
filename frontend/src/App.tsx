@@ -1,6 +1,7 @@
-import { Compass, LogOut, User } from "lucide-react";
-import { Link, NavLink, Route, Routes } from "react-router-dom";
+import { LogOut, User } from "lucide-react";
+import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 
+import { AtlasLogo, CoordStrip, WorldBackdrop } from "./components/Atlas/Atlas";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { useAuth } from "./hooks/useAuth";
 import { Game } from "./pages/Game";
@@ -13,30 +14,39 @@ import { Results } from "./pages/Results";
 function Nav() {
   const { user, logout } = useAuth();
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-md px-3 py-2 text-sm font-bold transition-colors ${
-      isActive ? "bg-teal-400/15 text-teal-200" : "text-slate-300 hover:bg-white/5 hover:text-white"
-    }`;
+    `nav-link ${isActive ? "is-active" : ""}`;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/88 backdrop-blur">
-      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4">
-        <Link className="flex items-center gap-2 text-lg font-black tracking-tight text-white" to="/">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-teal-400 text-slate-950 shadow-[0_4px_0_#0f766e]">
-            <Compass size={22} strokeWidth={3} />
-          </span>
-          AIm Here
+    <header className="nav">
+      <div className="nav-inner">
+        <Link className="nav-brand" to="/">
+          <AtlasLogo size={30} />
+          <span className="serif nav-brand-text">AIm Here</span>
+          <span className="mono nav-brand-coord">48.8566N · 2.3522E</span>
         </Link>
-        <nav className="flex items-center gap-1">
-          {user && <NavLink className={linkClass} to="/setup">Play</NavLink>}
-          <NavLink className={linkClass} to="/leaderboard">Leaderboard</NavLink>
+        <nav className="nav-links">
           {user && (
-            <NavLink className={linkClass} to="/profile">
-              <User size={17} />
+            <NavLink className={linkClass} to="/setup">
+              <span className="mono nav-link-num">01</span>
+              Play
             </NavLink>
           )}
+          <NavLink className={linkClass} to="/leaderboard">
+            <span className="mono nav-link-num">02</span>
+            Leaderboard
+          </NavLink>
+          {user && (
+            <NavLink className={linkClass} to="/profile">
+              <span className="mono nav-link-num">03</span>
+              <User size={17} />
+              Profile
+            </NavLink>
+          )}
+        </nav>
+        <div className="nav-actions">
           {user && (
             <button
-              className="ml-2 rounded-md border border-white/10 p-2 text-slate-300 hover:bg-white/5 hover:text-white"
+              className="nav-icon-btn"
               onClick={logout}
               title="Sign out"
               type="button"
@@ -44,16 +54,20 @@ function Nav() {
               <LogOut size={18} />
             </button>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );
 }
 
 export default function App() {
+  const location = useLocation();
+  const isGameplay = location.pathname.startsWith("/game/");
+
   return (
-    <>
-      <Nav />
+    <div className="page-frame">
+      {!isGameplay && <WorldBackdrop />}
+      {!isGameplay && <Nav />}
       <Routes>
         <Route element={<Home />} path="/" />
         <Route element={<Leaderboard />} path="/leaderboard" />
@@ -90,6 +104,11 @@ export default function App() {
           path="/profile"
         />
       </Routes>
-    </>
+      {!isGameplay && (
+        <footer className="footer">
+          <CoordStrip />
+        </footer>
+      )}
+    </div>
   );
 }

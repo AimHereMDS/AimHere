@@ -1,5 +1,8 @@
 from app.schemas.game import (
+    AchievementOut,
+    CareerStats,
     Coordinate,
+    CoveragePoint,
     GameCreate,
     GameOut,
     HintRequest,
@@ -12,10 +15,14 @@ from app.schemas.game import (
     RoundResult,
     RoundSubmit,
     UserProfileOut,
+    WorldCoverage,
 )
 
 __all__ = [
+    "AchievementOut",
+    "CareerStats",
     "Coordinate",
+    "CoveragePoint",
     "GameCreate",
     "GameOut",
     "HintRequest",
@@ -28,4 +35,5 @@ __all__ = [
     "RoundResult",
     "RoundSubmit",
     "UserProfileOut",
+    "WorldCoverage",
 ]

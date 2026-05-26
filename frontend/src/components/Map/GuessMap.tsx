@@ -70,7 +70,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
           position: guess,
           map,
           title: "Your guess",
-          icon: pinIcon("#f8fafc", "#14b8a6", 1.05),
+          icon: pinIcon("#f3ead6", "#e0a94a", 1.05),
         }),
       );
       points.push(guess);
@@ -81,8 +81,8 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
           position: real,
           map,
           title: "Real location",
-          label: { text: "R", color: "#020617", fontSize: "11px", fontWeight: "900" },
-          icon: markerIcon("#2dd4bf", "#020617", 11),
+          label: { text: "R", color: "#1b1208", fontSize: "11px", fontWeight: "900" },
+          icon: markerIcon("#7fa86b", "#1b1208", 11),
         }),
       );
       points.push(real);
@@ -92,9 +92,9 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
         new google.maps.Marker({
           position: aiGuess,
           map,
-          label: { text: "AI", color: "#020617", fontSize: "10px", fontWeight: "900" },
+          label: { text: "AI", color: "#0a121b", fontSize: "10px", fontWeight: "900" },
           title: "AI guess",
-          icon: markerIcon("#fbbf24", "#020617", 11),
+          icon: markerIcon("#8ba9c0", "#0a121b", 11),
         }),
       );
       points.push(aiGuess);
@@ -102,7 +102,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
     if (guess && real) {
       linesRef.current.push(new google.maps.Polyline({
         path: [guess, real],
-        strokeColor: "#f8fafc",
+        strokeColor: "#f3ead6",
         strokeOpacity: 0.9,
         strokeWeight: 2,
         icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
@@ -112,7 +112,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
     if (aiGuess && real) {
       linesRef.current.push(new google.maps.Polyline({
         path: [aiGuess, real],
-        strokeColor: "#fbbf24",
+        strokeColor: "#8ba9c0",
         strokeOpacity: 0.85,
         strokeWeight: 2,
         icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
@@ -130,17 +130,17 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
   }, [guess, real, aiGuess]);
 
   return (
-    <div className="relative h-full w-full bg-slate-950">
+    <div className="relative h-full w-full bg-[var(--bg-inset)]">
       <div ref={containerRef} className="h-full w-full" />
       {!guess && !locked && (
-        <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+        <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-[var(--line)] bg-[rgba(15,25,35,0.86)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] backdrop-blur">
           Click to place your guess
         </div>
       )}
       {guess && real && (
-        <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-white/10 bg-slate-950/90 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
-          <div className="font-black uppercase tracking-[0.14em] text-teal-300">Round result</div>
-          {typeof distanceKm === "number" && <div className="mt-1 font-black text-white">Distance: {formatKm(distanceKm)}</div>}
+        <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--line)] bg-[rgba(15,25,35,0.92)] px-3 py-2 text-xs text-[var(--ink)] shadow-lg backdrop-blur">
+          <div className="eyebrow text-[var(--accent)]">Round result</div>
+          {typeof distanceKm === "number" && <div className="mono mt-1 text-[var(--ink)]">Distance: {formatKm(distanceKm)}</div>}
         </div>
       )}
     </div>

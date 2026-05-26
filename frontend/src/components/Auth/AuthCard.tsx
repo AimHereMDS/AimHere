@@ -1,7 +1,8 @@
-import { LogIn, UserPlus } from "lucide-react";
+import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 import { useAuth } from "../../hooks/useAuth";
+import { CompassRose } from "../Atlas/Atlas";
 
 type Mode = "login" | "register";
 type FeedbackKind = "error" | "success";
@@ -52,83 +53,107 @@ export function AuthCard() {
   }
 
   return (
-    <div className="panel p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-black text-white">Account</h2>
-          <p className="text-sm text-slate-400">Email and password sign-in.</p>
+    <div className="surface overflow-hidden">
+      <div className="grid md:grid-cols-[0.9fr_1.1fr]">
+        <div className="hidden border-r border-[var(--line)] p-6 md:block">
+          <CompassRose size={118} spin />
+          <div className="eyebrow mt-6">Field log · entry 0001</div>
+          <h2 className="serif mt-3 text-4xl leading-none text-[var(--ink)]">
+            Sign in.
+            <br />
+            Keep your route.
+          </h2>
+          <p className="atlas-muted mt-4 text-sm leading-6">
+            Track scores, climb the table, and resume the match where the last panorama stopped.
+          </p>
+          <div className="mono mt-6 flex flex-wrap gap-3 border-t border-[var(--line)] pt-4 text-[10px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
+            <span>N 51 28 40</span>
+            <span>W 000 00 05</span>
+          </div>
         </div>
-        <div className="flex rounded-md border border-white/10 bg-slate-950/50 p-1">
-          <button
-            className={`rounded px-3 py-1.5 text-sm font-semibold ${mode === "login" ? "bg-teal-400 text-slate-950" : "text-slate-400"}`}
-            onClick={() => switchMode("login")}
-            type="button"
-          >
-            Login
-          </button>
-          <button
-            className={`rounded px-3 py-1.5 text-sm font-semibold ${mode === "register" ? "bg-teal-400 text-slate-950" : "text-slate-400"}`}
-            onClick={() => switchMode("register")}
-            type="button"
-          >
-            Register
-          </button>
+
+        <div className="p-4">
+          <div className="flex gap-1 rounded-[var(--radius-sm)] bg-[var(--bg-inset)] p-1">
+            <button
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                mode === "login" ? "bg-[var(--bg-card)] text-[var(--ink)] shadow-[0_1px_0_var(--line)]" : "text-[var(--ink-3)] hover:text-[var(--ink)]"
+              }`}
+              onClick={() => switchMode("login")}
+              type="button"
+            >
+              <span className="mono text-[10px] text-[var(--accent)]">01</span>
+              Sign in
+            </button>
+            <button
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                mode === "register" ? "bg-[var(--bg-card)] text-[var(--ink)] shadow-[0_1px_0_var(--line)]" : "text-[var(--ink-3)] hover:text-[var(--ink)]"
+              }`}
+              onClick={() => switchMode("register")}
+              type="button"
+            >
+              <span className="mono text-[10px] text-[var(--accent)]">02</span>
+              Create account
+            </button>
+          </div>
+
+          <form className="space-y-4 p-3 pt-6" onSubmit={submit}>
+            <label className="block">
+              <span className="atlas-label">Email</span>
+              <input
+                className="atlas-input"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@earth.org"
+                type="email"
+                value={email}
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="atlas-label">Password</span>
+              <input
+                className="atlas-input"
+                minLength={6}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="password"
+                type="password"
+                value={password}
+                required
+              />
+            </label>
+            {mode === "register" && (
+              <label className="block">
+                <span className="atlas-label">Confirm password</span>
+                <input
+                  className="atlas-input"
+                  minLength={6}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="password"
+                  type="password"
+                  value={confirmPassword}
+                  required
+                />
+              </label>
+            )}
+            <button className="btn-gg w-full" disabled={busy}>
+              {mode === "login" ? <LogIn size={18} /> : <UserPlus size={18} />}
+              {busy ? "Checking route..." : mode === "login" ? "Sign in" : "Create account"}
+              <ArrowRight size={16} />
+            </button>
+          </form>
+
+          {feedback && (
+            <p
+              className={`mx-3 mb-3 rounded-md border px-3 py-2 text-sm ${
+                feedback.kind === "error"
+                  ? "border-[color-mix(in_oklab,var(--neg),transparent_55%)] bg-[var(--neg-soft)] text-[var(--ink)]"
+                  : "border-[color-mix(in_oklab,var(--pos),transparent_55%)] bg-[var(--pos-soft)] text-[var(--ink)]"
+              }`}
+            >
+              {feedback.text}
+            </p>
+          )}
         </div>
       </div>
-      <form className="space-y-3" onSubmit={submit}>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-300">Email</span>
-          <input
-            className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-teal-300"
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            value={email}
-            required
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-300">Password</span>
-          <input
-            className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-teal-300"
-            minLength={6}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            value={password}
-            required
-          />
-        </label>
-        {mode === "register" && (
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-300">Confirm password</span>
-            <input
-              className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-teal-300"
-              minLength={6}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              type="password"
-              value={confirmPassword}
-              required
-            />
-          </label>
-        )}
-        <button
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-teal-400 px-4 py-2 font-black text-slate-950 disabled:opacity-60"
-          disabled={busy}
-        >
-          {mode === "login" ? <LogIn size={18} /> : <UserPlus size={18} />}
-          {mode === "login" ? "Sign in" : "Create account"}
-        </button>
-      </form>
-      {feedback && (
-        <p
-          className={`mt-3 rounded-md px-3 py-2 text-sm ${
-            feedback.kind === "error"
-              ? "border border-red-400/40 bg-red-600/20 text-red-100"
-              : "border border-teal-300/30 bg-teal-400/10 text-teal-100"
-          }`}
-        >
-          {feedback.text}
-        </p>
-      )}
     </div>
   );
 }

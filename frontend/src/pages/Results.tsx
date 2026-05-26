@@ -2,6 +2,7 @@ import { Bot, ChevronDown, Lightbulb, RotateCcw, Trophy } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
+import { AtlasStat, MiniWorldMap } from "../components/Atlas/Atlas";
 import { SummaryMap } from "../components/Map/SummaryMap";
 import type { ActiveGame, PlayedRound } from "../types/game";
 import { formatKm, totalScore } from "../utils/geo";
@@ -19,62 +20,100 @@ export function Results() {
   const roundsWon = game.rounds.filter((round) => round.result.score >= (round.result.ai_score ?? -1)).length;
   const isPve = game.mode === "pve";
   const playerWon = isPve && score > aiScore;
-  const pveRounds = game.rounds.filter((round) => round.result.ai_distance_km !== null && round.result.ai_distance_km !== undefined);
-  const averageDistanceDelta =
-    pveRounds.length > 0
-      ? pveRounds.reduce((sum, round) => sum + ((round.result.ai_distance_km ?? 0) - round.result.distance_km), 0) / pveRounds.length
-      : 0;
+  const averageDistance =
+    game.rounds.length > 0 ? game.rounds.reduce((sum, round) => sum + round.result.distance_km, 0) / game.rounds.length : 0;
+  const bestRound = game.rounds.reduce<PlayedRound | null>(
+    (best, round) => (!best || round.result.score > best.result.score ? round : best),
+    null,
+  );
+  const hintsUsed = game.rounds.reduce((sum, round) => sum + round.hintsUsed, 0);
 
   return (
-    <main className="app-shell mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8 text-center">
-        <div className="chip chip-amber mb-4">
-          <Trophy size={14} />
-          Game complete
-        </div>
-        <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Final score</div>
-        <h1 className="mt-2 text-6xl font-black tracking-tight text-teal-300 md:text-7xl">
-          {score.toLocaleString()}
-          <span className="text-2xl text-slate-400"> / 25,000</span>
-        </h1>
-        {isPve && (
-          <div className="mt-3 text-slate-300">
-            <p>
-              AI scored <span className="font-black text-amber-300">{aiScore.toLocaleString()}</span> / you won {roundsWon}/5 rounds /{" "}
-              <span className={playerWon ? "font-black uppercase text-teal-300" : score === aiScore ? "font-black uppercase text-slate-200" : "font-black uppercase text-red-300"}>
-                {playerWon ? "You win" : score === aiScore ? "Tied" : "AI wins"}
-              </span>
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              Average distance difference:{" "}
-              <span className={averageDistanceDelta >= 0 ? "font-black text-teal-300" : "font-black text-red-300"}>
-                {averageDistanceDelta >= 0 ? "+" : ""}
-                {formatKm(Math.abs(averageDistanceDelta))}
-              </span>{" "}
-              vs AI
-            </p>
+    <main className="app-shell">
+      <div className="atlas-page">
+        <section className="grid items-stretch gap-7 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="pt-3">
+            <span className="chip chip-accent">
+              <Trophy size={13} />
+              Match complete
+            </span>
+            <h1 className="serif atlas-title mt-5">
+              {score >= 18000 ? "Cartographer's hand." : score >= 12000 ? "Steady navigator." : score >= 6000 ? "Roving traveler." : "Marooned."}
+            </h1>
+
+            <div className="mt-7 flex flex-wrap items-end gap-8 border-b border-dashed border-[var(--line)] pb-6">
+              <div>
+                <div className="serif text-7xl leading-none text-[var(--accent)] md:text-8xl">{score.toLocaleString()}</div>
+                <div className="eyebrow mt-2">Your total · /25,000</div>
+              </div>
+              {isPve && (
+                <div>
+                  <div className="serif text-5xl leading-none text-[var(--ai)] md:text-6xl">{aiScore.toLocaleString()}</div>
+                  <div className="eyebrow mt-2">AI rival</div>
+                </div>
+              )}
+            </div>
+
+            {isPve && (
+              <div
+                className={`mt-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
+                  playerWon
+                    ? "border-[color-mix(in_oklab,var(--pos),transparent_60%)] bg-[var(--pos-soft)] text-[var(--pos)]"
+                    : score === aiScore
+                      ? "border-[var(--line)] bg-[var(--bg-card)] text-[var(--ink-2)]"
+                      : "border-[color-mix(in_oklab,var(--neg),transparent_60%)] bg-[var(--neg-soft)] text-[var(--neg)]"
+                }`}
+              >
+                <span className="mono">{playerWon ? "YOU WIN" : score === aiScore ? "TIED" : "AI WINS"}</span>
+                <span>· {roundsWon}/5 rounds won</span>
+              </div>
+            )}
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link className="btn-gg" to="/setup">
+                <RotateCcw size={18} />
+                Play again
+              </Link>
+              <Link className="btn-secondary" to="/leaderboard">
+                <Trophy size={18} />
+                Leaderboard
+              </Link>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="panel overflow-hidden p-2">
-          <SummaryMap rounds={game.rounds} />
-        </div>
-        <div className="space-y-3">
-          {game.rounds.map((round) => (
-            <RoundCard isPve={isPve} key={round.index} round={round} />
-          ))}
-        </div>
-      </div>
+          <div className="surface p-5">
+            <div className="eyebrow">Stat sheet</div>
+            <div className="mt-5 grid grid-cols-2 gap-5">
+              <AtlasStat label="Avg distance" size="sm" value={formatKm(averageDistance)} />
+              <AtlasStat label="Best round" hint={bestRound ? `${bestRound.result.score.toLocaleString()} pts` : undefined} size="sm" value={bestRound ? `R${bestRound.index}` : "-"} />
+              <AtlasStat label="Hints used" size="sm" value={hintsUsed} />
+              <AtlasStat label="Rounds" size="sm" value={game.rounds.length} />
+            </div>
+            <div className="mt-5 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
+              <div className="h-48">
+                <MiniWorldMap
+                  pins={game.rounds.map((round, index) => ({
+                    x: 180 + index * 145,
+                    y: 170 + ((round.index * 37) % 120),
+                    color: "var(--accent)",
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <div className="mt-8 flex justify-center">
-        <Link className="btn-gg" to="/setup">
-          <RotateCcw size={18} />
-          Play again
-        </Link>
+        <section className="mt-12 grid gap-7 lg:grid-cols-[1fr_380px]">
+          <div className="surface overflow-hidden p-2">
+            <SummaryMap rounds={game.rounds} />
+          </div>
+          <div className="space-y-3">
+            {game.rounds.map((round) => (
+              <RoundCard isPve={isPve} key={round.index} round={round} />
+            ))}
+          </div>
+        </section>
       </div>
-
     </main>
   );
 }
@@ -92,19 +131,25 @@ function RoundCard({ round, isPve }: RoundCardProps) {
   const [showAi, setShowAi] = useState(false);
 
   return (
-    <div className="panel p-4">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Round {round.index}</span>
-        <span className="font-black text-teal-300">+{round.result.score.toLocaleString()}</span>
+    <div className="surface p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">Round · 0{round.index}</span>
+        <span className="mono text-[var(--accent)]">+{round.result.score.toLocaleString()}</span>
       </div>
-      <div className="text-sm text-slate-300">
-        {formatKm(round.result.distance_km)} away
-        {round.hintsUsed > 0 && hints.length === 0 && ` / ${round.hintsUsed} hint${round.hintsUsed > 1 ? "s" : ""}`}
+      <div className="serif text-xl text-[var(--ink)]">{formatKm(round.result.distance_km)} away</div>
+      <div className="mt-3 h-28 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
+        <MiniWorldMap
+          pins={[
+            { x: 470 + round.index * 8, y: 238 + round.index * 4, color: "var(--accent)" },
+            ...(showAiSection ? [{ x: 515 + round.index * 5, y: 250, color: "var(--ai)" }] : []),
+          ]}
+          target={{ x: 500, y: 245, color: "var(--pos)" }}
+        />
       </div>
       {hints.length > 0 && (
-        <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
           <button
-            className="flex w-full items-center justify-between gap-2 text-left text-xs font-black uppercase tracking-[0.14em] text-amber-200"
+            className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-[var(--hint)]"
             onClick={() => setShowHints((value) => !value)}
             type="button"
           >
@@ -112,16 +157,13 @@ function RoundCard({ round, isPve }: RoundCardProps) {
               <Lightbulb size={14} />
               Hint log ({hints.length})
             </span>
-            <ChevronDown
-              className={`text-slate-400 transition-transform ${showHints ? "rotate-180" : ""}`}
-              size={14}
-            />
+            <ChevronDown className={`transition-transform ${showHints ? "rotate-180" : ""}`} size={14} />
           </button>
           {showHints && (
             <div className="mt-2 space-y-1.5">
               {hints.map((hint) => (
-                <p className="text-xs leading-5 text-slate-400" key={hint.level}>
-                  <span className="font-black text-slate-200">{hint.title}:</span> {hint.hint}
+                <p className="text-xs leading-5 text-[var(--ink-3)]" key={hint.level}>
+                  <span className="font-semibold text-[var(--ink-2)]">{hint.title}:</span> {hint.hint}
                 </p>
               ))}
             </div>
@@ -129,9 +171,9 @@ function RoundCard({ round, isPve }: RoundCardProps) {
         </div>
       )}
       {showAiSection && aiGuess && (
-        <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
           <button
-            className="flex w-full items-center justify-between gap-2 text-left text-xs font-black text-amber-200"
+            className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold text-[var(--ai)]"
             onClick={() => setShowAi((value) => !value)}
             type="button"
           >
@@ -139,14 +181,11 @@ function RoundCard({ round, isPve }: RoundCardProps) {
               <Bot size={14} />
               AI +{(round.result.ai_score ?? 0).toLocaleString()} ({formatKm(round.result.ai_distance_km ?? 0)})
             </span>
-            <ChevronDown
-              className={`text-slate-400 transition-transform ${showAi ? "rotate-180" : ""}`}
-              size={14}
-            />
+            <ChevronDown className={`transition-transform ${showAi ? "rotate-180" : ""}`} size={14} />
           </button>
           {showAi && (
-            <p className="mt-1.5 text-xs leading-5 text-slate-300">
-              <span className="font-bold text-white">Reasoning:</span> {aiGuess.explanation}
+            <p className="mt-2 text-xs leading-5 text-[var(--ink-3)]">
+              <span className="font-semibold text-[var(--ink-2)]">Reasoning:</span> {aiGuess.explanation}
             </p>
           )}
         </div>
