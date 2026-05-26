@@ -978,6 +978,28 @@ input[type="range"] {
   backdrop-filter: blur(8px);
 }
 
+.setup-coverage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+}
+
+.setup-coverage-map {
+  min-height: 210px;
+}
+
+.setup-coverage-map .world-coverage-country-readout {
+  min-width: min(170px, calc(100% - 88px));
+  max-width: calc(100% - 88px);
+}
+
+.setup-coverage-map .world-coverage-country-readout strong {
+  font-size: 15px;
+}
+
 .mini-panel {
   min-width: 0;
   padding: 13px;

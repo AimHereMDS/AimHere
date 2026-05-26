@@ -1,9 +1,11 @@
 import { Bot, Compass, Loader2, MapPin, Navigation, Play, PlayCircle, Sparkles, Timer, User, type LucideIcon } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { AtlasStat, MiniWorldMap } from "../components/Atlas/Atlas";
+import { AtlasStat } from "../components/Atlas/Atlas";
+import { getCoverageSummary, WorldCoverageMap } from "../components/Atlas/WorldCoverageMap";
+import { useAuth } from "../hooks/useAuth";
 import type { ActiveGame, AiDifficulty, GameMode, GameSetup as Setup, LocationMode, MovementMode } from "../types/game";
 import { apiFetch } from "../utils/api";
 
@@ -132,6 +134,7 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
 
 export function GameSetup() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [mode, setMode] = useState<GameMode>("single");
   const [locationMode, setLocationMode] = useState<LocationMode>("default");
   const [filter, setFilter] = useState("");
@@ -143,6 +146,8 @@ export function GameSetup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const savedGame = activeGame();
+  const coveragePoints = user?.world_coverage?.points ?? [];
+  const coverage = useMemo(() => getCoverageSummary(coveragePoints), [coveragePoints]);
 
   function handleLocationModeChange(newMode: LocationMode) {
     if (newMode === locationMode) return;
@@ -338,8 +343,28 @@ export function GameSetup() {
               <AtlasStat label="Rounds" size="sm" value="5" />
               <AtlasStat label="Max score" size="sm" value="25K" />
             </div>
-            <div className="mt-4 h-36 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
-              <MiniWorldMap pins={[{ x: 480, y: 100, color: "var(--accent)" }, { x: 545, y: 205, color: "var(--accent)" }, { x: 820, y: 320, color: "var(--accent)" }]} />
+            <div className="setup-coverage-head mt-5">
+              <div>
+                <span className="eyebrow">Visited atlas</span>
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">
+                  Countries unlocked from finished rounds.
+                </p>
+              </div>
+              <span className="mono text-xs text-[var(--accent)]">{coverage.countries.length} countries</span>
+            </div>
+            <div className="world-coverage-frame setup-coverage-map mt-3">
+              <WorldCoverageMap
+                allowPinToggle={false}
+                defaultShowPins={false}
+                points={coveragePoints}
+                showLabels={false}
+              />
+              {coverage.countries.length === 0 && (
+                <div className="world-coverage-empty">
+                  <MapPin size={18} />
+                  <span>Finish a match to unlock countries.</span>
+                </div>
+              )}
             </div>
           </div>
 

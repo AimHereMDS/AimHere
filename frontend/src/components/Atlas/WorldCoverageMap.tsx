@@ -128,16 +128,20 @@ export function WorldCoverageMap({
   className = "",
   showLabels = true,
   interactive = true,
+  defaultShowPins = true,
+  allowPinToggle = true,
 }: {
   points: Point[];
   className?: string;
   showLabels?: boolean;
   interactive?: boolean;
+  defaultShowPins?: boolean;
+  allowPinToggle?: boolean;
 }) {
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [fullscreen, setFullscreen] = useState(false);
-  const [showPins, setShowPins] = useState(true);
+  const [showPins, setShowPins] = useState(defaultShowPins);
   const [hoveredCountry, setHoveredCountry] = useState<WorldCountry | null>(null);
   const [drag, setDrag] = useState<{
     pointerId: number;
@@ -320,15 +324,17 @@ export function WorldCoverageMap({
           <button aria-label="Reset map" disabled={!zoomed} onClick={() => setZoomLevel(MIN_ZOOM)} title="Reset map" type="button">
             <RotateCcw size={14} />
           </button>
-          <button
-            aria-label={showPins ? "Hide pins" : "Show pins"}
-            aria-pressed={!showPins}
-            onClick={() => setShowPins((current) => !current)}
-            title={showPins ? "Hide pins" : "Show pins"}
-            type="button"
-          >
-            {showPins ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
+          {allowPinToggle && (
+            <button
+              aria-label={showPins ? "Hide pins" : "Show pins"}
+              aria-pressed={!showPins}
+              onClick={() => setShowPins((current) => !current)}
+              title={showPins ? "Hide pins" : "Show pins"}
+              type="button"
+            >
+              {showPins ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          )}
           <button
             aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen map"}
             aria-pressed={fullscreen}
