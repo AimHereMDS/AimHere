@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AtlasStat, MiniWorldMap } from "../components/Atlas/Atlas";
 import type { ActiveGame, AiDifficulty, GameMode, GameSetup as Setup, LocationMode, MovementMode } from "../types/game";
 import { apiFetch } from "../utils/api";
 
@@ -82,7 +83,7 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
     <div className="mt-3 space-y-4">
       {FILTER_CATEGORIES.map((category) => (
         <div key={category.name}>
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+          <p className="atlas-label mb-2">
             {category.name}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -94,10 +95,10 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
                   type="button"
                   aria-pressed={active}
                   onClick={() => onChange(active ? "" : chip.label)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all duration-150 ${
+                  className={`filter-chip ${
                     active
-                      ? "border-teal-300 bg-teal-300/[0.18] text-teal-200 shadow-[0_0_0_2px_rgba(45,212,191,0.18)]"
-                      : "border-white/10 bg-slate-950/40 text-slate-300 hover:border-teal-300/50 hover:bg-teal-300/[0.07] hover:text-teal-100"
+                      ? "is-active"
+                      : ""
                   }`}
                 >
                   <span className="text-base leading-none" aria-hidden="true">{chip.emoji}</span>
@@ -112,15 +113,15 @@ function FilterPicker({ value, onChange }: { value: string; onChange: (label: st
       {/* Selection status */}
       <div className="mt-1">
         {value ? (
-          <div className="flex items-center gap-2 rounded-md border border-teal-300/25 bg-teal-300/[0.07] px-3 py-2 text-sm">
-            <span className="text-teal-300">✓</span>
-            <span className="text-slate-300">
+          <div className="flex items-center gap-2 rounded-md border border-[color-mix(in_oklab,var(--accent),transparent_72%)] bg-[var(--accent-soft)] px-3 py-2 text-sm">
+            <span className="text-[var(--accent)]">✓</span>
+            <span className="text-[var(--ink-2)]">
               Curator Agent will search for{" "}
-              <span className="font-bold text-teal-200">{value}</span> locations.
+              <span className="font-bold text-[var(--accent)]">{value}</span> locations.
             </span>
           </div>
         ) : (
-          <p className="text-xs text-slate-500">Select a filter chip above to continue.</p>
+          <p className="text-xs text-[var(--ink-4)]">Select a filter chip above to continue.</p>
         )}
       </div>
     </div>
@@ -184,17 +185,18 @@ export function GameSetup() {
   }
 
   return (
-    <main className="app-shell mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8">
-        <div className="chip mb-3">
+    <main className="app-shell">
+      <div className="atlas-page atlas-page-narrow">
+      <div className="mb-8 max-w-3xl">
+        <div className="chip chip-accent mb-4">
           <Play size={14} />
           New game
         </div>
-        <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-5xl">Set the rules</h1>
-        <p className="mt-2 max-w-2xl text-slate-300">Five rounds, live Street View, optional hints, and an AI opponent when you want a race.</p>
+        <h1 className="serif atlas-title">Set the rules.</h1>
+        <p className="atlas-copy mt-4 max-w-2xl">Five rounds, live Street View, optional hints, and an AI opponent when you want a race.</p>
         {savedGame && savedGame.rounds.length < 5 && (
           <button
-            className="mt-5 inline-flex items-center gap-2 rounded-md border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:border-amber-200/70 hover:bg-amber-300/15"
+            className="mt-5 inline-flex items-center gap-3 rounded-full border border-[color-mix(in_oklab,var(--accent),transparent_60%)] bg-[var(--accent-soft)] px-4 py-2 text-sm font-semibold text-[var(--accent)] transition hover:bg-[color-mix(in_oklab,var(--accent),transparent_80%)]"
             onClick={() => navigate(`/game/${savedGame.id}`)}
             type="button"
           >
@@ -204,8 +206,8 @@ export function GameSetup() {
         )}
       </div>
 
-      <form className="grid gap-5 lg:grid-cols-[1fr_360px]" onSubmit={start}>
-        <div className="space-y-5">
+      <form className="grid items-start gap-7 lg:grid-cols-[1fr_360px]" onSubmit={start}>
+        <div className="space-y-7">
           <Section title="Game mode">
             <ChoiceGroup
               columns="sm:grid-cols-2"
@@ -238,25 +240,25 @@ export function GameSetup() {
 
             {/* Custom mode – free text input */}
             {locationMode === "custom" && (
-              <div className="mt-4 panel-soft p-4">
+              <div className="surface mt-4 p-4">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-semibold text-slate-300">Describe the locations</span>
+                  <span className="atlas-label">Describe the locations</span>
                   <input
-                    className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-teal-300"
+                    className="atlas-input"
                     maxLength={220}
                     onChange={(event) => setFilter(event.target.value)}
                     placeholder="Romania, ski towns, big cities in Asia"
                     value={filter}
                   />
                 </label>
-                <p className="mt-2 text-xs text-slate-400">Curator Agent will choose diverse playable coordinates and the backend snaps them toward Street View coverage.</p>
+                <p className="mt-2 text-xs text-[var(--ink-3)]">Curator Agent will choose diverse playable coordinates and the backend snaps them toward Street View coverage.</p>
               </div>
             )}
 
             {/* Filter mode – chip picker (no free-text input) */}
             {locationMode === "filter" && (
-              <div className="mt-4 panel-soft p-4">
-                <p className="text-sm font-semibold text-slate-300">Choose a filter</p>
+              <div className="surface mt-4 p-4">
+                <p className="text-sm font-semibold text-[var(--ink-2)]">Choose a filter</p>
                 <FilterPicker value={filter} onChange={setFilter} />
               </div>
             )}
@@ -276,13 +278,13 @@ export function GameSetup() {
               value={movementMode}
             />
             {movementMode === "limited" && (
-              <label className="mt-4 block panel-soft p-4">
-                <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-300">
+              <label className="surface mt-4 block p-4">
+                <span className="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ink-2)]">
                   Max panoramas
-                  <span className="font-black text-teal-300">{movementLimit}</span>
+                  <span className="mono font-semibold text-[var(--accent)]">{movementLimit}</span>
                 </span>
                 <input
-                  className="w-full accent-teal-400"
+                  className="slider"
                   max={30}
                   min={3}
                   onChange={(event) => setMovementLimit(Number(event.target.value))}
@@ -294,22 +296,22 @@ export function GameSetup() {
           </Section>
 
           <Section title="Timer">
-            <div className="panel-soft p-4">
+            <div className="surface p-4">
               <label className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 font-semibold text-white">
+                <span className="serif flex items-center gap-2 text-lg text-[var(--ink)]">
                   <Timer size={18} />
                   Round timer
                 </span>
-                <input checked={timerEnabled} className="h-5 w-5 accent-teal-400" onChange={(event) => setTimerEnabled(event.target.checked)} type="checkbox" />
+                <input checked={timerEnabled} className="h-5 w-5 accent-[var(--accent)]" onChange={(event) => setTimerEnabled(event.target.checked)} type="checkbox" />
               </label>
               {timerEnabled && (
                 <label className="mt-4 block">
-                  <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-300">
+                  <span className="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ink-2)]">
                     Seconds per round
-                    <span className="font-black text-teal-300">{timerSeconds}s</span>
+                    <span className="mono font-semibold text-[var(--accent)]">{timerSeconds}s</span>
                   </span>
                   <input
-                    className="w-full accent-teal-400"
+                    className="slider"
                     max={300}
                     min={30}
                     onChange={(event) => setTimerSeconds(Number(event.target.value))}
@@ -322,13 +324,33 @@ export function GameSetup() {
             </div>
           </Section>
 
+          <div className="surface p-5">
+            <div className="mb-4 flex items-center justify-between border-b border-dashed border-[var(--line)] pb-3">
+              <span className="eyebrow">Match summary</span>
+              <span className="mono text-xs text-[var(--ink-3)]">5 rounds · {timerEnabled ? `${timerSeconds}s` : "no timer"}</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <SummaryRow k="MODE" v={mode === "pve" ? `Vs AI · ${aiDifficulty}` : "Solo"} />
+              <SummaryRow k="LOCATIONS" v={locationMode === "default" ? "Random global" : locationMode === "custom" ? "Custom prompt" : filter || "Filter"} />
+              <SummaryRow k="MOVEMENT" v={movementMode === "limited" ? `Limited · ${movementLimit} panos` : movementMode === "rotation" ? "Rotation only" : "Full movement"} />
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-4">
+              <AtlasStat label="Rounds" size="sm" value="5" />
+              <AtlasStat label="Max score" size="sm" value="25K" />
+            </div>
+            <div className="mt-4 h-36 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
+              <MiniWorldMap pins={[{ x: 480, y: 100, color: "var(--accent)" }, { x: 545, y: 205, color: "var(--accent)" }, { x: 820, y: 320, color: "var(--accent)" }]} />
+            </div>
+          </div>
+
           <button className="btn-gg w-full disabled:translate-y-0 disabled:opacity-60" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" size={19} /> : <Play size={19} strokeWidth={3} />}
             {busy ? "Loading panoramas..." : "Start 5 rounds"}
           </button>
-          {error && <p className="rounded-md border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+          {error && <p className="rounded-md border border-[color-mix(in_oklab,var(--neg),transparent_50%)] bg-[var(--neg-soft)] p-3 text-sm text-[var(--ink)]">{error}</p>}
         </aside>
       </form>
+      </div>
     </main>
   );
 }
@@ -337,8 +359,11 @@ export function GameSetup() {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="panel p-5">
-      <h2 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-teal-300">{title}</h2>
+    <section>
+      <div className="mb-3 flex items-baseline gap-3">
+        <span className="h-px w-8 bg-[var(--line-strong)]" />
+        <h2 className="serif atlas-section-title">{title}</h2>
+      </div>
       {children}
     </section>
   );
@@ -362,23 +387,31 @@ function ChoiceGroup<T extends string>({
         const Icon = option.icon;
         return (
           <button
-            className={`rounded-lg border p-4 text-left transition ${
-              active
-                ? "border-teal-300 bg-teal-300/[0.12] shadow-[0_0_0_3px_rgba(45,212,191,0.12)]"
-                : "border-white/10 bg-slate-950/35 hover:border-teal-300/45"
-            }`}
+            className={`atlas-selector ${active ? "is-active" : ""}`}
             key={option.value}
             onClick={() => onChange(option.value)}
             type="button"
           >
-            <div className="mb-1 flex items-center gap-2">
-              {Icon && <Icon className={active ? "text-teal-300" : "text-slate-400"} size={17} />}
-              <div className="text-sm font-black uppercase tracking-tight text-white">{option.label}</div>
+            <span className="atlas-selector-icon">
+              {Icon && <Icon size={18} />}
+            </span>
+            <div>
+              <span className="atlas-selector-title">{option.label}</span>
+              <span className="atlas-selector-sub">{option.helper}</span>
             </div>
-            <div className="text-xs leading-5 text-slate-400">{option.helper}</div>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function SummaryRow({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="mono min-w-20 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">{k}</span>
+      <span className="h-px flex-1 bg-[repeating-linear-gradient(to_right,var(--line)_0_3px,transparent_3px_6px)]" />
+      <span className="text-right text-[var(--ink)]">{v}</span>
     </div>
   );
 }

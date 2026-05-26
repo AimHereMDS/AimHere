@@ -23,19 +23,19 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
         new google.maps.Marker({
           position: round.real,
           map,
-          label: { text: String(round.index), color: "#020617", fontSize: "11px", fontWeight: "900" },
+          label: { text: String(round.index), color: "#1b1208", fontSize: "11px", fontWeight: "900" },
           title: "Real location",
-          icon: markerIcon("#2dd4bf", "#020617", 11),
+          icon: markerIcon("#7fa86b", "#1b1208", 11),
         });
         new google.maps.Marker({
           position: round.guess,
           map,
           title: "Your guess",
-          icon: pinIcon("#f8fafc", "#14b8a6", 1.05),
+          icon: pinIcon("#f3ead6", "#e0a94a", 1.05),
         });
         new google.maps.Polyline({
           path: [round.guess, round.real],
-          strokeColor: "#f8fafc",
+          strokeColor: "#f3ead6",
           strokeOpacity: 0.8,
           strokeWeight: 2,
           icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
@@ -46,13 +46,13 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
           new google.maps.Marker({
             position: aiGuess,
             map,
-            label: { text: "AI", color: "#020617", fontSize: "10px", fontWeight: "900" },
+            label: { text: "AI", color: "#0a121b", fontSize: "10px", fontWeight: "900" },
             title: "AI guess",
-            icon: markerIcon("#fbbf24", "#020617", 11),
+            icon: markerIcon("#8ba9c0", "#0a121b", 11),
           });
           new google.maps.Polyline({
             path: [aiGuess, round.real],
-            strokeColor: "#fbbf24",
+            strokeColor: "#8ba9c0",
             strokeOpacity: 0.8,
             strokeWeight: 2,
             icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
@@ -67,5 +67,5 @@ export function SummaryMap({ rounds }: { rounds: PlayedRound[] }) {
     });
   }, [rounds]);
 
-  return <div ref={containerRef} className="h-[520px] overflow-hidden rounded-lg border border-white/10 bg-slate-950" />;
+  return <div ref={containerRef} className="h-[520px] overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--bg-inset)]" />;
 }

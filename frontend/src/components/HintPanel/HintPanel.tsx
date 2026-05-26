@@ -59,14 +59,15 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
   }
 
   return (
-    <div className="panel-soft p-4 text-white">
+    <div className="panel-soft p-4 text-[var(--ink)]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-black">Hints</h3>
-          <p className="text-sm text-slate-400">Each hint lowers the maximum round score.</p>
+          <div className="eyebrow">Hint guide</div>
+          <h3 className="serif mt-1 text-lg leading-none">Field clues</h3>
+          <p className="mt-1 text-sm text-[var(--ink-3)]">Each hint lowers the maximum round score.</p>
         </div>
         <button
-          className="flex items-center gap-2 rounded-md bg-amber-400 px-3 py-2 text-sm font-black text-slate-950 disabled:opacity-50"
+          className="btn-gg btn-sm disabled:opacity-50"
           disabled={disabled || busy || hints.length >= 3}
           onClick={getHint}
           type="button"
@@ -76,32 +77,33 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
         </button>
       </div>
       <div className="max-h-[40vh] space-y-1.5 overflow-y-auto pr-1">
-        {error && <div className="rounded-md bg-red-950/50 p-3 text-sm text-red-200">{error}</div>}
+        {error && <div className="rounded-md border border-[color-mix(in_oklab,var(--neg),transparent_55%)] bg-[var(--neg-soft)] p-3 text-sm text-[var(--ink)]">{error}</div>}
         {hints.map((hint) => {
           const isOpen = expandedLevel === hint.level;
           return (
-            <div key={hint.level} className="rounded-md bg-white/10">
+            <div key={hint.level} className="rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
               <button
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
                 onClick={() => toggleHint(hint.level)}
                 type="button"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-amber-200">{hint.title}</span>
-                  <span className="text-xs text-slate-400">{Math.round(hint.max_score_multiplier * 100)}%</span>
+                  <span className="mono text-[10px] tracking-[0.14em] text-[var(--hint)]">0{hint.level}</span>
+                  <span className="text-sm font-semibold text-[var(--ink)]">{hint.title}</span>
+                  <span className="text-xs text-[var(--ink-3)]">{Math.round(hint.max_score_multiplier * 100)}%</span>
                 </div>
                 <ChevronDown
-                  className={`text-slate-300 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  className={`text-[var(--ink-3)] transition-transform ${isOpen ? "rotate-180" : ""}`}
                   size={16}
                 />
               </button>
               {isOpen && (
-                <div className="border-t border-white/5 px-3 py-2 text-sm text-slate-200">{hint.hint}</div>
+                <div className="border-t border-[var(--line-soft)] px-3 py-2 text-sm leading-6 text-[var(--ink-2)]">{hint.hint}</div>
               )}
             </div>
           );
         })}
-        {!hints.length && <p className="text-sm text-slate-400">No hints used.</p>}
+        {!hints.length && <p className="text-sm text-[var(--ink-3)]">No hints used.</p>}
       </div>
     </div>
   );
