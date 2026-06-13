@@ -128,6 +128,7 @@ export function WorldCoverageMap({
   className = "",
   showLabels = true,
   interactive = true,
+  allowWheelZoom = true,
   defaultShowPins = true,
   allowPinToggle = true,
 }: {
@@ -135,6 +136,7 @@ export function WorldCoverageMap({
   className?: string;
   showLabels?: boolean;
   interactive?: boolean;
+  allowWheelZoom?: boolean;
   defaultShowPins?: boolean;
   allowPinToggle?: boolean;
 }) {
@@ -191,6 +193,8 @@ export function WorldCoverageMap({
   function handleWheel(event: WheelEvent<HTMLDivElement>) {
     if (!interactive) return;
     event.preventDefault();
+    event.stopPropagation();
+    if (!allowWheelZoom) return;
     setZoomLevel(zoom + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
   }
 

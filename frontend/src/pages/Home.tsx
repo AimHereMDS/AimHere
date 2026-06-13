@@ -175,7 +175,7 @@ export function Home() {
         <section className="surface mt-10 overflow-hidden p-4">
           <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
             <div className="world-coverage-frame min-h-64">
-              <WorldCoverageMap points={homeMapPoints} />
+              <WorldCoverageMap allowWheelZoom={false} points={homeMapPoints} />
             </div>
             <div className="flex flex-col justify-center p-3">
               <span className="eyebrow">Field atlas</span>

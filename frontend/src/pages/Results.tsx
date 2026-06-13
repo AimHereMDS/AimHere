@@ -13,6 +13,7 @@ function lastGame(): ActiveGame | null {
 }
 
 export function Results() {
+  const [selectedRoundIndex, setSelectedRoundIndex] = useState<number | null>(null);
   const game = lastGame();
   if (!game) return <Navigate to="/setup" replace />;
   const score = totalScore(game.rounds);
@@ -27,6 +28,10 @@ export function Results() {
     null,
   );
   const hintsUsed = game.rounds.reduce((sum, round) => sum + round.hintsUsed, 0);
+  const selectedRound = selectedRoundIndex
+    ? game.rounds.find((round) => round.index === selectedRoundIndex) ?? null
+    : null;
+  const displayedRounds = selectedRound ? [selectedRound] : game.rounds;
 
   return (
     <main className="app-shell">
@@ -105,11 +110,17 @@ export function Results() {
 
         <section className="mt-12 grid gap-7 lg:grid-cols-[1fr_380px]">
           <div className="surface overflow-hidden p-2">
-            <SummaryMap rounds={game.rounds} />
+            <SummaryMap className="h-[520px] overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--bg-inset)]" rounds={displayedRounds} />
           </div>
           <div className="space-y-3">
             {game.rounds.map((round) => (
-              <RoundCard isPve={isPve} key={round.index} round={round} />
+              <RoundCard
+                isPve={isPve}
+                key={round.index}
+                onSelect={() => setSelectedRoundIndex((current) => (current === round.index ? null : round.index))}
+                round={round}
+                selected={selectedRoundIndex === round.index}
+              />
             ))}
           </div>
         </section>
@@ -121,9 +132,11 @@ export function Results() {
 type RoundCardProps = {
   round: PlayedRound;
   isPve: boolean;
+  onSelect: () => void;
+  selected: boolean;
 };
 
-function RoundCard({ round, isPve }: RoundCardProps) {
+function RoundCard({ round, isPve, onSelect, selected }: RoundCardProps) {
   const hints = round.hintLog ?? round.hints ?? [];
   const aiGuess = round.result.ai_guess;
   const showAiSection = isPve && Boolean(aiGuess);
@@ -131,26 +144,42 @@ function RoundCard({ round, isPve }: RoundCardProps) {
   const [showAi, setShowAi] = useState(false);
 
   return (
-    <div className="surface p-4">
+    <div
+      aria-pressed={selected}
+      className="surface p-4"
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onSelect();
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <div className="mb-2 flex items-center justify-between">
         <span className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">Round · 0{round.index}</span>
         <span className="mono text-[var(--accent)]">+{round.result.score.toLocaleString()}</span>
       </div>
       <div className="serif text-xl text-[var(--ink)]">{formatKm(round.result.distance_km)} away</div>
       <div className="mt-3 h-28 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
-        <MiniWorldMap
-          pins={[
-            { x: 470 + round.index * 8, y: 238 + round.index * 4, color: "var(--accent)" },
-            ...(showAiSection ? [{ x: 515 + round.index * 5, y: 250, color: "var(--ai)" }] : []),
-          ]}
-          target={{ x: 500, y: 245, color: "var(--pos)" }}
+        <SummaryMap
+          className="h-full w-full"
+          compact
+          fitPadding={22}
+          interactive={false}
+          rounds={[round]}
+          showRoundLabels={false}
         />
       </div>
       {hints.length > 0 && (
         <div className="mt-3 border-t border-[var(--line)] pt-3">
           <button
             className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-[var(--hint)]"
-            onClick={() => setShowHints((value) => !value)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowHints((value) => !value);
+            }}
             type="button"
           >
             <span className="flex items-center gap-1.5">
@@ -174,7 +203,10 @@ function RoundCard({ round, isPve }: RoundCardProps) {
         <div className="mt-3 border-t border-[var(--line)] pt-3">
           <button
             className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold text-[var(--ai)]"
-            onClick={() => setShowAi((value) => !value)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowAi((value) => !value);
+            }}
             type="button"
           >
             <span className="flex items-center gap-1.5">
