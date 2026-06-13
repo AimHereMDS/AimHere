@@ -49,9 +49,9 @@ async def test_opponent_agent_difficulty_distance_ranges(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     real = (48.8584, 2.2945)
     expected = {
-        "easy": (900, 2800),
-        "medium": (180, 850),
-        "hard": (15, 180),
+        "easy": (1800, 4000),
+        "medium": (300, 900),
+        "hard": (5, 60),
     }
     for difficulty, (minimum, maximum) in expected.items():
         guess = await opponent_guess(real[0], real[1], difficulty)
@@ -155,8 +155,8 @@ async def test_visual_guess_keeps_easy_and_medium_in_difficulty_ranges(monkeypat
 
     assert hard["lat"] == 48.8584
     assert hard["lng"] == 2.2945
-    assert 180 <= medium_distance <= 850
-    assert 900 <= easy_distance <= 2800
+    assert 300 <= medium_distance <= 900
+    assert 1800 <= easy_distance <= 4000
     assert hard_distance < medium_distance < easy_distance
     assert "French road signs" in str(easy["explanation"])
     assert "French road signs" in str(medium["explanation"])
