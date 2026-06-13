@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { loadGoogleMaps } from "../../hooks/useGoogleMaps";
 import type { Coordinate } from "../../types/game";
@@ -21,6 +21,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
   const linesRef = useRef<google.maps.Polyline[]>([]);
   const lockedRef = useRef(false);
   const onGuessRef = useRef(onGuess);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     lockedRef.current = Boolean(locked);
@@ -45,6 +46,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
         restriction: { latLngBounds: { north: 85, south: -85, west: -180, east: 180 }, strictBounds: false },
       });
       mapRef.current = map;
+      setMapReady(true);
       clickListener = map.addListener("click", (event: google.maps.MapMouseEvent) => {
         if (lockedRef.current || !event.latLng || !onGuessRef.current) return;
         onGuessRef.current({ lat: event.latLng.lat(), lng: event.latLng.lng() });
@@ -127,7 +129,7 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
       map.setCenter(points[0]);
       map.setZoom(5);
     }
-  }, [guess, real, aiGuess]);
+  }, [guess, real, aiGuess, mapReady]);
 
   return (
     <div className="relative h-full w-full bg-[var(--bg-inset)]">

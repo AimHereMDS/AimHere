@@ -142,8 +142,12 @@ export function GameSetup() {
   const [movementLimit, setMovementLimit] = useState(10);
   const [timerEnabled, setTimerEnabled] = useState(true);
   const [timerSeconds, setTimerSeconds] = useState(90);
-  const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>("medium");
+  const [aiLevel, setAiLevel] = useState(2);
+  const [hintsEnabled, setHintsEnabled] = useState(true);
+  const [showAiReasoning, setShowAiReasoning] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const DIFFICULTY_LEVELS: AiDifficulty[] = ["cadet", "navigator", "cartographer", "surveyor", "oracle"];
   const [error, setError] = useState("");
   const savedGame = activeGame();
   const coveragePoints = user?.world_coverage?.points ?? [];
@@ -172,12 +176,15 @@ export function GameSetup() {
       movement_mode: movementMode,
       movement_limit: movementLimit,
       timer_seconds: timerEnabled ? timerSeconds : null,
-      ai_difficulty: aiDifficulty,
+      ai_difficulty: DIFFICULTY_LEVELS[aiLevel - 1],
+      hints_enabled: hintsEnabled,
+      show_ai_reasoning: showAiReasoning,
     };
     try {
       const response = await apiFetch<{ id: string; mode: GameMode; locations: ActiveGame["locations"] }>("/games", {
         method: "POST",
         body: JSON.stringify(setup),
+        timeoutMs: 90000,
       });
       const activeGame: ActiveGame = { id: response.id, mode: response.mode, setup, locations: response.locations, rounds: [] };
       localStorage.setItem("aim-here-active-game", JSON.stringify(activeGame));
@@ -227,16 +234,35 @@ export function GameSetup() {
 
           {mode === "pve" && (
             <Section title="AI difficulty">
-              <ChoiceGroup
-                columns="sm:grid-cols-3"
-                onChange={setAiDifficulty}
-                options={[
-                  { value: "easy", label: "Easy", helper: "Wide mistakes." },
-                  { value: "medium", label: "Medium", helper: "Balanced guesses." },
-                  { value: "hard", label: "Hard", helper: "Tighter guesses." },
-                ]}
-                value={aiDifficulty}
-              />
+              <div className="surface p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="eyebrow">Level</div>
+                    <div className="serif mt-1 text-2xl text-[var(--ink)]">
+                      {["Cadet","Navigator","Cartographer","Surveyor","Oracle"][aiLevel - 1]}
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--ink-3)]">
+                      {["Loose pins, frequent misses.","Solid on continents.","Reads signage and biomes.","Near-pixel close on familiar regions.","Often within 5km. Mortal terror."][aiLevel - 1]}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {[1,2,3,4,5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setAiLevel(n)}
+                        className={`h-9 w-9 rounded-full border text-xs font-semibold mono transition ${
+                          n <= aiLevel
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                            : "border-[var(--line-strong)] text-[var(--ink-3)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </Section>
           )}
 
@@ -268,9 +294,27 @@ export function GameSetup() {
               </div>
             )}
           </Section>
+
+          <Section title="Hints">
+            <div className="surface divide-y divide-[var(--line)] overflow-hidden p-0">
+              <ToggleRow
+                label="Enable hint requests"
+                sub="Ask the Hint Guide for region, country, or landmark clues during a round."
+                on={hintsEnabled}
+                onChange={setHintsEnabled}
+              />
+              <ToggleRow
+                label="Show AI reasoning at round end"
+                sub="Read the Rival's thought process after each guess."
+                on={showAiReasoning}
+                onChange={setShowAiReasoning}
+                disabled={mode !== "pve"}
+              />
+            </div>
+          </Section>
         </div>
 
-        <aside className="space-y-5">
+        <aside className="space-y-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
           <Section title="Movement">
             <ChoiceGroup
               columns="grid-cols-1"
@@ -335,37 +379,42 @@ export function GameSetup() {
               <span className="mono text-xs text-[var(--ink-3)]">5 rounds · {timerEnabled ? `${timerSeconds}s` : "no timer"}</span>
             </div>
             <div className="space-y-2 text-sm">
-              <SummaryRow k="MODE" v={mode === "pve" ? `Vs AI · ${aiDifficulty}` : "Solo"} />
+              <SummaryRow k="MODE" v={mode === "pve" ? `Vs AI · ${["Cadet","Navigator","Cartographer","Surveyor","Oracle"][aiLevel - 1]}` : "Solo"} />
               <SummaryRow k="LOCATIONS" v={locationMode === "default" ? "Random global" : locationMode === "custom" ? "Custom prompt" : filter || "Filter"} />
               <SummaryRow k="MOVEMENT" v={movementMode === "limited" ? `Limited · ${movementLimit} panos` : movementMode === "rotation" ? "Rotation only" : "Full movement"} />
+              <SummaryRow k="HINTS" v={hintsEnabled ? "On" : "Off"} />
             </div>
             <div className="mt-5 grid grid-cols-2 gap-4">
               <AtlasStat label="Rounds" size="sm" value="5" />
               <AtlasStat label="Max score" size="sm" value="25K" />
             </div>
-            <div className="setup-coverage-head mt-5">
-              <div>
-                <span className="eyebrow">Visited atlas</span>
-                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">
-                  Countries unlocked from finished rounds.
-                </p>
-              </div>
-              <span className="mono text-xs text-[var(--accent)]">{coverage.countries.length} countries</span>
-            </div>
-            <div className="world-coverage-frame setup-coverage-map mt-3">
-              <WorldCoverageMap
-                allowPinToggle={false}
-                defaultShowPins={false}
-                points={coveragePoints}
-                showLabels={false}
-              />
-              {coverage.countries.length === 0 && (
-                <div className="world-coverage-empty">
-                  <MapPin size={18} />
-                  <span>Finish a match to unlock countries.</span>
+            <details className="mt-5">
+              <summary className="cursor-pointer">
+                <div className="setup-coverage-head">
+                  <div>
+                    <span className="eyebrow">Visited atlas</span>
+                    <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">
+                      Countries unlocked from finished rounds.
+                    </p>
+                  </div>
+                  <span className="mono text-xs text-[var(--accent)]">{coverage.countries.length} countries</span>
                 </div>
-              )}
-            </div>
+              </summary>
+              <div className="world-coverage-frame setup-coverage-map mt-3">
+                <WorldCoverageMap
+                  allowPinToggle={false}
+                  defaultShowPins={false}
+                  points={coveragePoints}
+                  showLabels={false}
+                />
+                {coverage.countries.length === 0 && (
+                  <div className="world-coverage-empty">
+                    <MapPin size={18} />
+                    <span>Finish a match to unlock countries.</span>
+                  </div>
+                )}
+              </div>
+            </details>
           </div>
 
           <button className="btn-gg w-full disabled:translate-y-0 disabled:opacity-60" disabled={busy}>
@@ -438,5 +487,24 @@ function SummaryRow({ k, v }: { k: string; v: string }) {
       <span className="h-px flex-1 bg-[repeating-linear-gradient(to_right,var(--line)_0_3px,transparent_3px_6px)]" />
       <span className="text-right text-[var(--ink)]">{v}</span>
     </div>
+  );
+}
+
+function ToggleRow({ label, sub, on, onChange, disabled }: { label: string; sub: string; on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!on)}
+      className={`flex w-full items-center justify-between gap-4 p-4 text-left transition ${disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[var(--bg-hover,color-mix(in_oklab,var(--accent),transparent_92%))]"}`}
+    >
+      <div>
+        <div className={`serif text-base ${on && !disabled ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>{label}</div>
+        <div className="mt-0.5 text-xs text-[var(--ink-4)]">{sub}</div>
+      </div>
+      <div className={`relative h-5 w-9 flex-shrink-0 rounded-full border transition ${on && !disabled ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--line-strong)] bg-[var(--bg-inset)]"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${on && !disabled ? "translate-x-4" : "translate-x-0.5"}`} />
+      </div>
+    </button>
   );
 }

@@ -13,14 +13,20 @@ router = APIRouter(prefix="/locations", tags=["locations"])
 
 
 async def random_street_view_locations(count: int = 5) -> list[Coordinate]:
-    locations: list[Coordinate] = []
-    attempts = 0
-    while len(locations) < count and attempts < count * 80:
-        attempts += 1
+    import asyncio
+
+    async def _try_random() -> Coordinate | None:
         lat, lng = random_land_coordinate()
-        snapped = await nearest_street_view_coordinate(lat, lng, radius=50000, label="Random Street View")
-        if snapped:
-            locations.append(snapped)
+        return await nearest_street_view_coordinate(lat, lng, radius=50000, label="Random Street View")
+
+    locations: list[Coordinate] = []
+    for _ in range(6):
+        if len(locations) >= count:
+            break
+        needed = count - len(locations)
+        batch = await asyncio.gather(*[_try_random() for _ in range(needed * 3)])
+        locations.extend(c for c in batch if c is not None)
+
     if len(locations) < count:
         locations.extend(await curate_locations("diverse world cities", count - len(locations)))
     return locations[:count]

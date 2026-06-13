@@ -16,7 +16,7 @@ export type PanoramaView = {
 export type MovementMode = "rotation" | "limited" | "full";
 export type GameMode = "single" | "pve";
 export type LocationMode = "default" | "custom" | "filter";
-export type AiDifficulty = "easy" | "medium" | "hard";
+export type AiDifficulty = "cadet" | "navigator" | "cartographer" | "surveyor" | "oracle";
 
 export type GameSetup = {
   mode: GameMode;
@@ -26,6 +26,8 @@ export type GameSetup = {
   movement_limit: number;
   timer_seconds?: number | null;
   ai_difficulty?: AiDifficulty;
+  hints_enabled?: boolean;
+  show_ai_reasoning?: boolean;
 };
 
 export type RoundResult = {

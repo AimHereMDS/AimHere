@@ -14,7 +14,7 @@ export function AtlasLogo({ size = 32 }: { size?: number }) {
   );
 }
 
-export function CompassRose({ size = 92, spin = false }: { size?: number; spin?: boolean }) {
+export function CompassRose({ size = 92, heading, spin = false }: { size?: number; heading?: number | null; spin?: boolean }) {
   const ticks = Array.from({ length: 32 }, (_, index) => {
     const angle = (index / 32) * Math.PI * 2;
     const r1 = index % 4 === 0 ? 38 : index % 2 === 0 ? 42 : 44;
@@ -54,9 +54,11 @@ export function CompassRose({ size = 92, spin = false }: { size?: number; spin?:
       <text className="atlas-compass-label" x="10" y="53">
         W
       </text>
-      <polygon className="atlas-compass-needle atlas-compass-needle-n" points="50,18 47,52 53,52" />
-      <polygon className="atlas-compass-needle atlas-compass-needle-s" points="50,82 47,52 53,52" />
-      <circle className="atlas-compass-center" cx="50" cy="52" r="2.5" />
+      <g transform={`rotate(${heading ?? 0} 50 50)`}>
+        <polygon className="atlas-compass-needle atlas-compass-needle-n" points="50,18 47,52 53,52" />
+        <polygon className="atlas-compass-needle atlas-compass-needle-s" points="50,82 47,52 53,52" />
+        <circle className="atlas-compass-center" cx="50" cy="52" r="2.5" />
+      </g>
     </svg>
   );
 }
