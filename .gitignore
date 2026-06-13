@@ -1,5 +1,6 @@
 .env
 .DS_Store
+.aimhere-app.pids
 
 backend/.venv/
 backend/.pytest_cache/

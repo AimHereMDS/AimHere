@@ -4,6 +4,7 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$APP_DIR/backend"
 FRONTEND_DIR="$APP_DIR/frontend"
+PID_FILE="$APP_DIR/.aimhere-app.pids"
 
 load_env_file() {
   local line key value
@@ -68,6 +69,7 @@ cleanup() {
     wait "${PIDS[@]}" >/dev/null 2>&1 || true
     PIDS=()
   fi
+  rm -f "$PID_FILE"
 }
 
 stop_app() {
@@ -91,6 +93,8 @@ echo "Pornesc frontend-ul pe http://127.0.0.1:5173"
   exec npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ) &
 PIDS+=("$!")
+
+printf "%s\n" "${PIDS[@]}" > "$PID_FILE"
 
 echo
 echo "Aplicatia ruleaza. Apasa Ctrl+C ca sa o opresti."
