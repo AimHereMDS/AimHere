@@ -3,6 +3,11 @@ import { getAuthToken } from "./auth";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const DEFAULT_TIMEOUT_MS = 35000;
 
+export type ApiFetchOptions = RequestInit & {
+  timeoutMs?: number | null;
+  timeoutMessage?: string;
+};
+
 async function authHeaders(): Promise<Record<string, string>> {
   const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -30,8 +35,8 @@ async function readErrorMessage(response: Response): Promise<string> {
   return `Request failed with ${response.status}`;
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, timeoutMessage, ...fetchOptions } = options;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(await authHeaders()),
@@ -39,8 +44,10 @@ export async function apiFetch<T>(path: string, options: RequestInit & { timeout
   new Headers(fetchOptions.headers).forEach((value, key) => {
     headers[key] = value;
   });
-  const controller = fetchOptions.signal ? null : new AbortController();
-  const timeoutId = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+  const shouldTimeout = !fetchOptions.signal && timeoutMs !== null && timeoutMs > 0;
+  const controller = shouldTimeout ? new AbortController() : null;
+  const timeoutId =
+    controller && timeoutMs !== null ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...fetchOptions,
@@ -53,7 +60,9 @@ export async function apiFetch<T>(path: string, options: RequestInit & { timeout
     return (await response.json()) as T;
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
+      if (!controller) throw new Error("Request was cancelled");
+      const timeoutSeconds = timeoutMs !== null ? timeoutMs / 1000 : DEFAULT_TIMEOUT_MS / 1000;
+      throw new Error(timeoutMessage ?? `Request timed out after ${timeoutSeconds}s`);
     }
     throw err;
   } finally {

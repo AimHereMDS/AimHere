@@ -83,7 +83,7 @@ export function Profile() {
             </div>
 
             <div className="world-coverage-frame mt-5">
-              <WorldCoverageMap points={coveragePoints} />
+              <WorldCoverageMap allowWheelZoom={false} points={coveragePoints} />
               {coveragePoints.length === 0 && (
                 <div className="world-coverage-empty">
                   <Route size={18} />
