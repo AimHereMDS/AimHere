@@ -152,7 +152,7 @@ export function Home() {
             <FeatureCard
               icon={<Bot size={19} />}
               num="03"
-              text="Solo for personal bests or PvE, where the Rival places a guess after your pin lands."
+              text="Solo for personal bests or PvE, where the Rival reads the scene while you line up your pin."
               title="AI rival"
             />
             <FeatureCard

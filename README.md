@@ -35,7 +35,7 @@ AIm Here is an AI-powered GeoGuessr-like web game. Players explore live Google S
 3. Create an Anthropic API key.
 4. Copy `.env.example` to `.env` and fill in values.
 
-The backend uses `ANTHROPIC_MODEL=claude-sonnet-4-20250514` by default. Override it in `.env` if your Anthropic account requires a different available model.
+The backend uses `ANTHROPIC_MODEL=claude-sonnet-4-6` by default and retries `ANTHROPIC_MODEL_FALLBACKS=claude-haiku-4-5-20251001` if the configured model is unavailable for your account. Override these in `.env` if your Anthropic account exposes different model IDs.
 
 Visual hints and visual opponent guesses require both `ANTHROPIC_API_KEY` and `GOOGLE_MAPS_API_KEY`. Without the Google Maps key, the app still runs, but the Hint Agent falls back to generic player-style advice and the Opponent Agent falls back to deterministic difficulty-based placement instead of scene-specific visual reasoning.
 

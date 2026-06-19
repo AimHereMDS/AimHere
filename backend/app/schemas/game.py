@@ -44,6 +44,13 @@ class GameOut(BaseModel):
     locations: list[Coordinate]
 
 
+class OpponentGuess(BaseModel):
+    lat: float
+    lng: float
+    explanation: str
+    difficulty: str
+
+
 class RoundSubmit(BaseModel):
     round_index: int = Field(ge=1, le=5)
     real: Coordinate
@@ -51,13 +58,14 @@ class RoundSubmit(BaseModel):
     hint_count: int = Field(default=0, ge=0, le=3)
     ai_difficulty: str | None = "medium"
     view: PanoramaView | None = None
+    prefetched_ai_guess: OpponentGuess | None = None
 
 
-class OpponentGuess(BaseModel):
-    lat: float
-    lng: float
-    explanation: str
-    difficulty: str
+class OpponentGuessRequest(BaseModel):
+    round_index: int = Field(ge=1, le=5)
+    real: Coordinate
+    ai_difficulty: str | None = "medium"
+    view: PanoramaView | None = None
 
 
 class RoundResult(BaseModel):
@@ -76,6 +84,7 @@ class HintRequest(BaseModel):
     lng: float = Field(ge=-180, le=180)
     used_levels: int = Field(default=0, ge=0, le=2)
     view: PanoramaView | None = None
+    source_prompt: str | None = Field(default=None, max_length=300)
 
 
 class HintResponse(BaseModel):

@@ -29,6 +29,18 @@ async def test_hint_agent_returns_progressive_levels(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_hint_agent_fallback_uses_source_prompt(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    first = await progressive_hint(44.4268, 26.1025, 0, source_prompt="stadioane de fotbal")
+    second = await progressive_hint(44.4268, 26.1025, 1, source_prompt="stadioane de fotbal")
+
+    assert "stadioane de fotbal" in str(first["hint"])
+    assert "stadioane de fotbal" in str(second["hint"])
+    assert "visible" in str(first["hint"]).lower()
+
+
+@pytest.mark.asyncio
 async def test_hint_agent_uses_current_view_image_without_coordinates(monkeypatch):
     captured: dict[str, object] = {}
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
@@ -89,3 +101,45 @@ async def test_hint_agent_uses_current_view_image_without_coordinates(monkeypatc
     assert "ordered by usefulness" in combined_prompt
     assert "do not organize them into named categories" in combined_prompt.lower()
     assert content[1]["type"] == "image"
+
+
+@pytest.mark.asyncio
+async def test_hint_agent_passes_source_prompt_without_hidden_metadata(monkeypatch):
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    async def fake_street_view_static_image(lat, lng, heading=None, pitch=None, fov=None, pano_id=None):
+        return {"media_type": "image/jpeg", "data": "abc123"}
+
+    class FakeMessages:
+        async def create(self, **kwargs):
+            captured["anthropic_request"] = kwargs
+            return SimpleNamespace(
+                content=[
+                    SimpleNamespace(
+                        text=(
+                            '["The stadium-like structure and gates fit the football-stadium theme.", '
+                            '"Visible transit and street signs can identify the city around the stadium.", '
+                            '"A club crest, sponsor board, or stadium name would be the strongest clue."]'
+                        )
+                    )
+                ]
+            )
+
+    class FakeAsyncAnthropic:
+        def __init__(self, api_key, **kwargs):
+            self.messages = FakeMessages()
+
+    monkeypatch.setattr("app.agents.hint_agent.street_view_static_image", fake_street_view_static_image)
+    monkeypatch.setattr("app.agents.hint_agent.AsyncAnthropic", FakeAsyncAnthropic)
+
+    view = PanoramaView(lat=1.23, lng=4.56, pano_id="pano-123", heading=210.5, pitch=-4.0, fov=72)
+    hint = await progressive_hint(44.4268, 26.1025, 0, view, "stadioane de fotbal")
+
+    assert "football-stadium" in str(hint["hint"])
+    request = captured["anthropic_request"]
+    content = request["messages"][0]["content"]
+    combined_prompt = f"{request['system']} {content[0]['text']}"
+    assert "stadioane de fotbal" in combined_prompt
+    for hidden_value in ("44.4268", "26.1025", "1.23", "4.56", "pano-123"):
+        assert hidden_value not in combined_prompt

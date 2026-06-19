@@ -15,7 +15,21 @@ HINT_MULTIPLIERS = {1: 0.85, 2: 0.7, 3: 0.55}
 HINT_TITLES = {1: "Hint 1", 2: "Hint 2", 3: "Hint 3"}
 
 
-def _fallback_hints() -> list[str]:
+def _clean_source_prompt(source_prompt: str | None) -> str | None:
+    cleaned = " ".join((source_prompt or "").split())
+    if not cleaned:
+        return None
+    return cleaned[:300]
+
+
+def _fallback_hints(source_prompt: str | None = None) -> list[str]:
+    cleaned_prompt = _clean_source_prompt(source_prompt)
+    if cleaned_prompt:
+        return [
+            f'This round was generated from "{cleaned_prompt}", so start by looking for visible clues that fit that theme without jumping straight to a country guess.',
+            f'Use the "{cleaned_prompt}" theme to prioritize matching visual evidence: venue shape, nearby signs, public transport stops, branding, language, road furniture, and architecture.',
+            "Try to read the most specific visible name, sponsor, web domain, street sign, or city clue near the themed location, then combine it with the language and surroundings.",
+        ]
     return [
         "Start with visible low-spoiler clues: readable text, alphabets, road signs, lane direction, and plate colors.",
         "Combine the clearest road furniture, markings, vegetation, architecture, and sign style into a stronger regional guess.",
@@ -45,9 +59,11 @@ class HintAgent(ClaudeAgent):
         lng: float,
         used_levels: int,
         view: PanoramaView | None = None,
+        source_prompt: str | None = None,
     ) -> dict[str, float | int | str]:
         level = min(3, used_levels + 1)
-        hints = _fallback_hints()
+        cleaned_source_prompt = _clean_source_prompt(source_prompt)
+        hints = _fallback_hints(cleaned_source_prompt)
         if self.can_call_claude:
             try:
                 image_lat = view.lat if view else lat
@@ -62,11 +78,19 @@ class HintAgent(ClaudeAgent):
                 )
                 if not image:
                     raise ValueError("No Street View image available for visual hinting")
+                source_context = (
+                    f'The player-visible setup prompt for this location set is: "{cleaned_source_prompt}". '
+                    "Use this only as category/theme context the player already chose; do not treat it as "
+                    "the answer, and still ground every hint in visible evidence from the image. "
+                    if cleaned_source_prompt
+                    else ""
+                )
                 content: list[dict] = [
                     {
                         "type": "text",
                         "text": (
                             "Analyze this Street View frame exactly like a player looking at the panorama. "
+                            f"{source_context}"
                             "Use only visual evidence visible in the image. Return three hints ordered by "
                             "usefulness, not by fixed categories: the first should be helpful but not too "
                             "direct, the second should be more specific, and the third should be the strongest "
@@ -105,7 +129,6 @@ class HintAgent(ClaudeAgent):
                     ),
                     messages=[
                         {"role": "user", "content": content},
-                        {"role": "assistant", "content": "["},
                     ],
                 )
                 if raw_text and not raw_text.lstrip().startswith("["):
@@ -113,7 +136,7 @@ class HintAgent(ClaudeAgent):
                 hints = _parse_hints(raw_text)
             except Exception as exc:
                 logger.warning("Hint Agent fell back to generic visual hints: %s", exc)
-                hints = _fallback_hints()
+                hints = _fallback_hints(cleaned_source_prompt)
         return {
             "level": level,
             "title": HINT_TITLES[level],
@@ -127,5 +150,6 @@ async def progressive_hint(
     lng: float,
     used_levels: int,
     view: PanoramaView | None = None,
+    source_prompt: str | None = None,
 ) -> dict[str, float | int | str]:
-    return await HintAgent().progressive_hint(lat, lng, used_levels, view)
+    return await HintAgent().progressive_hint(lat, lng, used_levels, view, source_prompt)

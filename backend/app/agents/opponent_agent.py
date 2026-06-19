@@ -176,7 +176,6 @@ class OpponentAgent(ClaudeAgent):
                     ),
                     messages=[
                         {"role": "user", "content": content},
-                        {"role": "assistant", "content": "{"},
                     ],
                 )
                 if raw_text and not raw_text.lstrip().startswith("{"):

@@ -3,14 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { curateLocations } from "../agents/curatorAgent";
-import { submitPveRound } from "../agents/opponentAgent";
+import { prefetchOpponentGuess, submitPveRound } from "../agents/opponentAgent";
 import { AtlasLogo, CompassRose } from "../components/Atlas/Atlas";
 import { HintPanel } from "../components/HintPanel/HintPanel";
 import { GuessMap } from "../components/Map/GuessMap";
 import { SummaryMap } from "../components/Map/SummaryMap";
 import { ScoreBoard } from "../components/ScoreBoard/ScoreBoard";
 import { StreetViewPanorama } from "../components/StreetView/StreetViewPanorama";
-import type { ActiveGame, Coordinate, Hint, PanoramaView, PlayedRound, RoundResult } from "../types/game";
+import type { ActiveGame, Coordinate, Hint, OpponentGuess, PanoramaView, PlayedRound, RoundResult } from "../types/game";
 import { apiFetch } from "../utils/api";
 import { formatKm, totalScore } from "../utils/geo";
 
@@ -28,6 +28,8 @@ export function Game() {
   const [roundHints, setRoundHints] = useState<Hint[]>([]);
   const hintsUsed = roundHints.length;
   const [panoramaView, setPanoramaView] = useState<PanoramaView | null>(null);
+  const [prefetchedOpponentGuess, setPrefetchedOpponentGuess] = useState<OpponentGuess | null>(null);
+  const [opponentThinking, setOpponentThinking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [secondsLeft, setSecondsLeft] = useState<number | null>(game?.setup.timer_seconds ?? null);
@@ -37,6 +39,8 @@ export function Game() {
   const timerSubmitRef = useRef(false);
   const panoramaRetriesRef = useRef<Map<number, number>>(new Map());
   const replacingLocationRef = useRef(false);
+  const opponentGuessPromiseRef = useRef<Promise<OpponentGuess | null> | null>(null);
+  const opponentGuessKeyRef = useRef<string | null>(null);
 
   const MAX_PANORAMA_RETRIES = 2;
 
@@ -49,6 +53,9 @@ export function Game() {
   const roundIndex = (game?.rounds.length ?? 0) + 1;
   const current = game?.locations[roundIndex - 1] ?? null;
   const roundComplete = Boolean(result);
+  const panoramaPrefetchKey = panoramaView
+    ? (panoramaView.pano_id ?? `${panoramaView.lat.toFixed(5)},${panoramaView.lng.toFixed(5)}`)
+    : null;
 
   useEffect(() => {
     if (!game || game.id !== gameId) navigate("/setup", { replace: true });
@@ -70,7 +77,54 @@ export function Game() {
     return () => window.clearInterval(timer);
   }, [roundIndex, game?.setup.timer_seconds, roundComplete]);
 
+  useEffect(() => {
+    opponentGuessPromiseRef.current = null;
+    opponentGuessKeyRef.current = null;
+    setPrefetchedOpponentGuess(null);
+    setOpponentThinking(false);
+  }, [game?.id, roundIndex, current?.lat, current?.lng]);
+
+  useEffect(() => {
+    if (!game || game.mode !== "pve" || !current || result || !panoramaView || !panoramaPrefetchKey) return;
+    const requestKey = `${game.id}:${roundIndex}:${current.lat.toFixed(5)},${current.lng.toFixed(5)}:${panoramaPrefetchKey}`;
+    if (opponentGuessKeyRef.current === requestKey || opponentGuessPromiseRef.current) return;
+
+    opponentGuessKeyRef.current = requestKey;
+    setOpponentThinking(true);
+    const promise = prefetchOpponentGuess({
+      gameId: game.id,
+      roundIndex,
+      real: current,
+      aiDifficulty: game.setup.ai_difficulty ?? "navigator",
+      view: panoramaView,
+    })
+      .then((aiGuess) => {
+        if (opponentGuessKeyRef.current === requestKey) {
+          setPrefetchedOpponentGuess(aiGuess);
+        }
+        return aiGuess;
+      })
+      .catch((err) => {
+        if (opponentGuessKeyRef.current === requestKey) {
+          console.warn("Opponent prefetch failed; submit will use the regular PvE path.", err);
+        }
+        return null;
+      })
+      .finally(() => {
+        if (opponentGuessKeyRef.current === requestKey) {
+          setOpponentThinking(false);
+        }
+      });
+    opponentGuessPromiseRef.current = promise;
+  }, [current, game, panoramaPrefetchKey, panoramaView, result, roundIndex]);
+
   const canSubmit = Boolean(guess && current && !result && !busy);
+
+  const waitForPrefetchedOpponentGuess = useCallback(async () => {
+    if (prefetchedOpponentGuess) return prefetchedOpponentGuess;
+    if (!opponentGuessPromiseRef.current) return null;
+    return opponentGuessPromiseRef.current;
+  }, [prefetchedOpponentGuess]);
 
   const submitRound = useCallback(async () => {
     if (!game || !guess || !current) return;
@@ -85,6 +139,7 @@ export function Game() {
         ai_difficulty: game.setup.ai_difficulty,
         view: panoramaView,
       };
+      const prefetchedAiGuess = game.mode === "pve" ? await waitForPrefetchedOpponentGuess() : null;
       const response =
         game.mode === "pve"
           ? await submitPveRound({
@@ -95,6 +150,7 @@ export function Game() {
               hintCount: hintsUsed,
               aiDifficulty: game.setup.ai_difficulty ?? "navigator",
               view: panoramaView,
+              prefetchedAiGuess,
             })
           : await apiFetch<RoundResult>(`/games/${game.id}/rounds`, { method: "POST", body: JSON.stringify(payload) });
       setResult(response);
@@ -104,7 +160,7 @@ export function Game() {
     } finally {
       setBusy(false);
     }
-  }, [game, guess, current, roundIndex, hintsUsed, panoramaView]);
+  }, [game, guess, current, roundIndex, hintsUsed, panoramaView, waitForPrefetchedOpponentGuess]);
 
   useEffect(() => {
     if (secondsLeft === 0 && canSubmit && !timerSubmitRef.current) {
@@ -169,6 +225,7 @@ export function Game() {
   }, [game, result, roundIndex]);
 
   const aiGuess = useMemo(() => (result?.ai_guess ? { lat: result.ai_guess.lat, lng: result.ai_guess.lng } : null), [result]);
+  const hintSourcePrompt = game?.setup.location_mode === "default" ? null : game?.setup.filter_text ?? null;
   const completedRoundPreview = useMemo<PlayedRound[]>(() => {
     if (!result || !guess || !current) return [];
     return [{ index: roundIndex, real: current, guess, result, hintsUsed, hintLog: roundHints }];
@@ -248,6 +305,7 @@ export function Game() {
             <div className="hud-glass flex items-center gap-2 px-3 py-2 font-semibold text-[var(--ai)]">
               <Bot size={18} />
               <span className="mono">AI {game.rounds.reduce((sum, round) => sum + (round.result.ai_score ?? 0), 0).toLocaleString()}</span>
+              {opponentThinking && !roundComplete && <span className="h-1.5 w-1.5 rounded-full bg-[var(--ai)] opacity-80" />}
             </div>
           )}
           <div className="hud-glass flex items-center gap-2 px-3 py-2 font-semibold">
@@ -270,7 +328,14 @@ export function Game() {
         <div className="hud-glass hud-compass">
           <CompassRose heading={panoramaView?.heading} size={64} />
         </div>
-        <HintPanel key={`${game.id}-${roundIndex}`} disabled={roundComplete} location={current} onHintsChange={setRoundHints} view={panoramaView} />
+        <HintPanel
+          key={`${game.id}-${roundIndex}`}
+          disabled={roundComplete}
+          location={current}
+          onHintsChange={setRoundHints}
+          sourcePrompt={hintSourcePrompt}
+          view={panoramaView}
+        />
       </div>
 
       <div className="hud-rounds-summary">

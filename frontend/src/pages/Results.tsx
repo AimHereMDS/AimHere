@@ -2,7 +2,7 @@ import { Bot, ChevronDown, Lightbulb, RotateCcw, Trophy } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import { AtlasStat, MiniWorldMap } from "../components/Atlas/Atlas";
+import { AtlasStat } from "../components/Atlas/Atlas";
 import { SummaryMap } from "../components/Map/SummaryMap";
 import type { ActiveGame, PlayedRound } from "../types/game";
 import { formatKm, totalScore } from "../utils/geo";
@@ -93,17 +93,6 @@ export function Results() {
               <AtlasStat label="Best round" hint={bestRound ? `${bestRound.result.score.toLocaleString()} pts` : undefined} size="sm" value={bestRound ? `R${bestRound.index}` : "-"} />
               <AtlasStat label="Hints used" size="sm" value={hintsUsed} />
               <AtlasStat label="Rounds" size="sm" value={game.rounds.length} />
-            </div>
-            <div className="mt-5 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--bg-inset)]">
-              <div className="h-48">
-                <MiniWorldMap
-                  pins={game.rounds.map((round, index) => ({
-                    x: 180 + index * 145,
-                    y: 170 + ((round.index * 37) % 120),
-                    color: "var(--accent)",
-                  }))}
-                />
-              </div>
             </div>
           </div>
         </section>

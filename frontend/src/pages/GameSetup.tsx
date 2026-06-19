@@ -226,7 +226,7 @@ export function GameSetup() {
               onChange={setMode}
               options={[
                 { value: "single", label: "Solo", helper: "You against the map.", icon: User },
-                { value: "pve", label: "Vs AI", helper: "Opponent guesses after your pin.", icon: Bot },
+                { value: "pve", label: "Vs AI", helper: "Opponent reads the scene while you place your pin.", icon: Bot },
               ]}
               value={mode}
             />

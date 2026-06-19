@@ -14,7 +14,7 @@ from app.models.score import Score
 from app.models.user import UserProfile
 from app.routers.locations import random_street_view_locations
 from app.agents.curator_agent import curate_locations
-from app.schemas import GameCreate, GameOut, RoundResult, RoundSubmit
+from app.schemas import GameCreate, GameOut, OpponentGuess, OpponentGuessRequest, RoundResult, RoundSubmit
 from app.security import get_current_user
 
 router = APIRouter(prefix="/games", tags=["games"])
@@ -46,6 +46,28 @@ async def create_game(
     return GameOut(id=game.id, mode=game.mode, locations=locations)
 
 
+@router.post("/{game_id}/opponent-guess", response_model=OpponentGuess)
+async def prefetch_opponent_guess(
+    game_id: str,
+    request: OpponentGuessRequest,
+    db: Session = Depends(get_db),
+    user: UserProfile = Depends(get_current_user),
+) -> OpponentGuess:
+    game = db.get(Game, game_id)
+    if not game or game.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if game.mode != "pve":
+        raise HTTPException(status_code=400, detail="Opponent guesses are only available in PvE mode")
+    return OpponentGuess(
+        **await opponent_guess(
+            request.real.lat,
+            request.real.lng,
+            request.ai_difficulty or game.ai_difficulty or "medium",
+            request.view,
+        )
+    )
+
+
 @router.post("/{game_id}/rounds", response_model=RoundResult)
 async def submit_round(
     game_id: str,
@@ -63,11 +85,15 @@ async def submit_round(
     ai_distance = None
     ai_score = None
     if game.mode == "pve":
-        ai_payload = await opponent_guess(
-            request.real.lat,
-            request.real.lng,
-            request.ai_difficulty or game.ai_difficulty or "medium",
-            request.view,
+        ai_payload = (
+            request.prefetched_ai_guess.model_dump()
+            if request.prefetched_ai_guess
+            else await opponent_guess(
+                request.real.lat,
+                request.real.lng,
+                request.ai_difficulty or game.ai_difficulty or "medium",
+                request.view,
+            )
         )
         ai_distance = haversine_km(request.real.lat, request.real.lng, float(ai_payload["lat"]), float(ai_payload["lng"]))
         ai_score = score_from_distance(ai_distance, 0)

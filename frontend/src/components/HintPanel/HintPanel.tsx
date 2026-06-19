@@ -7,11 +7,12 @@ import type { Coordinate, Hint, PanoramaView } from "../../types/game";
 type Props = {
   location: Coordinate;
   view?: PanoramaView | null;
+  sourcePrompt?: string | null;
   disabled: boolean;
   onHintsChange: (hints: Hint[]) => void;
 };
 
-export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
+export function HintPanel({ location, view, sourcePrompt, disabled, onHintsChange }: Props) {
   const [hints, setHints] = useState<Hint[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +42,7 @@ export function HintPanel({ location, view, disabled, onHintsChange }: Props) {
     setBusy(true);
     setError("");
     try {
-      const hint = await requestHint(location, hints.length, view);
+      const hint = await requestHint(location, hints.length, view, sourcePrompt);
       if (!isMounted.current) return;
       setHints((current) => (current.length >= 3 ? current : [...current, hint]));
       setExpandedLevel(hint.level);

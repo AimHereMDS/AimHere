@@ -34,16 +34,18 @@ export type RoundResult = {
   round_id: string;
   distance_km: number;
   score: number;
-  ai_guess?: {
-    lat: number;
-    lng: number;
-    explanation: string;
-    difficulty: AiDifficulty;
-  } | null;
+  ai_guess?: OpponentGuess | null;
   ai_distance_km?: number | null;
   ai_score?: number | null;
   rounds_won: number;
   ai_rounds_won: number;
+};
+
+export type OpponentGuess = {
+  lat: number;
+  lng: number;
+  explanation: string;
+  difficulty: AiDifficulty | string;
 };
 
 export type PlayedRound = {
