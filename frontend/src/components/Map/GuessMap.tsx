@@ -130,9 +130,6 @@ export function GuessMap({ guess, onGuess, real, aiGuess, locked, distanceKm }: 
       points.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 60);
       window.setTimeout(() => map.fitBounds(bounds, 60), 320);
-    } else if (points.length === 1) {
-      map.setCenter(points[0]);
-      map.setZoom(5);
     }
   }, [guess, real, aiGuess, mapReadyToken]);
 
