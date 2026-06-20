@@ -97,7 +97,7 @@ export function Results() {
           </div>
         </section>
 
-        <section className="mt-12 grid gap-7 lg:grid-cols-[1fr_380px]">
+        <section className="mt-12 grid items-start gap-7 lg:grid-cols-[1fr_380px]">
           <div className="surface overflow-hidden p-2">
             <SummaryMap className="h-[520px] overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--bg-inset)]" rounds={displayedRounds} />
           </div>
